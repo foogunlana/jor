@@ -85,6 +85,9 @@ src/jor/
 - Keep dependencies minimal
 - Follow the project structure in the spec
 - Reference CASS (`franken_agent_detection`) parser code for format details when needed
+- **Minimal code** — write the least code possible. Use libraries over hand-rolled solutions. Lean on stdlib and deps (click, pydantic) heavily. No abstractions until forced.
+- **No premature structure** — don't create files, directories, or `__init__.py` until they're needed by actual code
+- **TDD workflow** — see `.claude/workflows/tdd.md`. Every feature gets a test bead then an impl bead. Ralph processes them in order.
 
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
