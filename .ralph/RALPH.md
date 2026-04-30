@@ -6,28 +6,21 @@ You are one engineer in a relay team building this project. Each engineer picks 
 
 | Check | Command |
 |-------|---------|
-| Tests | `npm test` |
-| Types | `npm run typecheck` |
-| Build (main) | `npm run build:main` |
-| Build (renderer) | `npm run build:renderer` |
-| UI smoke test | `npm run ui:smoke` |
-| Launch app | `npm run start` (or `npm run start:observe` for terminal logs) |
-| DB migrations | `npm run db:generate` (after schema changes in `src/editor/dataAgents/editorIndexSchema.ts`) |
+| Tests | `pytest` |
+| Lint  | `ruff check` |
 
 ## On Start
 
-1. Run `bd list --status in_progress` to check for any work left mid-flight (read comments for context)
+1. Run `bd list --status in_progress` to check for any work claimed for this worktree
 2. Run `bd list --status closed --sort closed --limit 1` to see the most recently completed bead (read comments for context on what was just done)
 3. Run `bd ready` to see available beads
-4. Run `npm test && npm run typecheck` to ensure the codebase is green
+4. Run `pytest` to ensure the codebase is green
 
 ## Pick a Bead
 
-**SKIP beads with `manual-testing` label.** These require interactive testing that cannot be automated. They will be handled by a human.
-
 ### If In-Progress Bead Exists
 
-You MUST handle the in-progress bead before starting new work. Don't assume the previous engineer succeeded.
+You MUST work the in-progress bead. These were pre-claimed for this worktree. Don't claim new beads.
 
 1. Run `bd show <id>` to read the full bead and ALL comments
 2. Check `git status` to see if there are uncommitted changes
@@ -55,9 +48,13 @@ You MUST handle the in-progress bead before starting new work. Don't assume the 
 
 ### If No In-Progress Bead
 
-1. Choose the next logical bead from `bd ready` based on dependencies and project state
-2. Run `bd show <id>` to read the full bead - **if it has label `manual-testing`, skip it and pick another**
+Pick the next bead from `bd ready` that is NOT claimed (in_progress) by another worktree.
+
+1. Choose the next logical bead based on dependencies and project state
+2. Run `bd show <id>` to read the full bead
 3. Run `bd update <id> --status in_progress` to claim it
+
+**IMPORTANT:** Only claim beads that were pre-assigned to this worktree or are unclaimed. If `bd ready` shows no beads and nothing is in-progress, you're done — exit cleanly.
 
 ## Do the Work (TDD)
 
@@ -66,19 +63,19 @@ You MUST handle the in-progress bead before starting new work. Don't assume the 
 - What's the minimal implementation?
 
 ### 2. Write a Failing Test
-- Add a test file in `tests/` (e.g. `tests/my-feature.test.ts`)
+- Add a test file in `tests/` (e.g. `tests/test_feature.py`)
 - Write a test that captures the acceptance criteria
-- Run `npm test` and confirm the new test fails
+- Run `pytest` and confirm the new test fails
 
 ### 3. Make It Pass
 - Write the minimal code to make the test pass
 - Keep it simple — only what the bead requires
-- Run `npm test` and confirm it passes
+- Run `pytest` and confirm it passes
 
 ### 4. Refactor
 - Clean up any duplication or messiness
-- Run `npm run typecheck` to check for type errors
-- Run `npm test` to ensure nothing broke
+- Run `ruff check` to check for lint errors
+- Run `pytest` to ensure nothing broke
 
 ## Context Window Check
 
@@ -96,50 +93,18 @@ If you cannot proceed due to unclear requirements OR tooling/technical issues:
 2. Add a comment explaining the blocker with enough context for the PM to help: `bd comments add <id> "Blocked: [reason]. Tried X, considered Y, need decision on Z."`
 3. Move on to the next available bead from `bd ready`, or exit if none
 
-The PM will be notified and can unblock the bead once the issue is resolved.
-
 ### Permission Denied Errors
 
-If multiple tool calls are being denied due to permissions (e.g. Bash commands blocked, browser tools unavailable):
+If multiple tool calls are being denied due to permissions (e.g. Bash commands blocked):
 
 1. **Don't keep retrying** - if 3+ actions are denied, this bead likely needs interactive mode
 2. Block the bead: `bd update <id> --status blocked --add-label needs-info`
-3. Add a comment explaining what permissions are needed: `bd comments add <id> "Blocked: needs interactive session to fix permissions. Required: [list denied actions]."`
+3. Add a comment explaining what permissions are needed: `bd comments add <id> "Blocked: needs interactive session. Required: [list denied actions]."`
 4. Move on to the next available bead from `bd ready`, or exit if none
-
-### Creative/Product Decisions
-
-If a bead requires a creative or product decision not specified in the description:
-
-1. Check project documentation for product context (UVP, target users, design principles)
-2. If enough context exists to decide confidently, proceed
-3. If not, block the bead with `needs-info` label and add a comment explaining:
-   - What decision is needed
-   - What options you considered
-   - Why you couldn't decide from existing context
-
-Do NOT guess on product decisions. A wrong implementation wastes more time than blocking.
 
 ## Verify Before Closing (MANDATORY)
 
 **Tests passing is not enough.** You MUST verify the actual functionality works before closing.
-
-### Verification by Change Type
-
-**UI changes:**
-1. Run `npm run ui:smoke` to verify the app launches and renders
-2. For deeper verification, run `npm run start:observe` and interact with the relevant screen
-3. Take a screenshot and verify the change is visible and correct
-4. Stop the app when done
-
-**Logic/behaviour changes:**
-1. Identify the happy path for the feature
-2. Exercise that path (via test or manual verification)
-3. Confirm the expected output/behaviour occurs
-
-**Documentation/config changes:**
-1. Verify the file is syntactically valid
-2. For docs, read through to confirm accuracy
 
 ### Verification Checklist
 
@@ -152,22 +117,19 @@ Before closing, answer these questions:
 
 ## On Finishing ONE Bead
 
-1. Run `npm run typecheck` - no errors
-2. Run `npm test` - all pass
-3. Run `npm run build:main && npm run build:renderer` - builds succeed
+1. Run `ruff check` - no errors
+2. Run `pytest` - all pass
 3. **Verify the change works** (see "Verify Before Closing" section above)
 4. **ALWAYS add a closing comment** before closing the bead: `bd comments add <id> "..."`. Include:
    - What was done (brief summary of implementation)
    - Any decisions made or assumptions
    - Considerations for the next engineer (gotchas, related work, things to watch)
-   - For research beads: findings, what works/doesn't, recommendations
 5. **Review related beads:** Run `bd ready` and check if any other beads relate to work you just did. Add comments with learnings that could help future work.
 6. **Check if bead was updated during your session:** Run `bd show <id>` and check the "Updated" timestamp
    - If the bead was updated AFTER you started (requirements changed), do NOT close it. Commit your work and exit so the next engineer can pick up the updated requirements.
    - If the bead was NOT updated, close it: `bd close <id>`
 7. Commit all changes
-8. Run `bd sync` to push bead changes to remote
-9. **Exit with message: RALPH_DONE**
+8. **Exit with message: RALPH_DONE**
 
 ## Exit Signal
 

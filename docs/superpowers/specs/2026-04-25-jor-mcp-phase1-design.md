@@ -66,15 +66,16 @@ Lists indexed sessions with optional filters.
 
 ```bash
 $ jor list
- #  Tool         Date        Messages  Title
- 1  claude_code  Apr 20      42        Auth module refactor
- 2  codex        Apr 18      28        Data pipeline fix
- 3  claude_code  Apr 17      15        README update
+ ID        Tool         Date        Messages  Title
+ a1b2c3d4  claude_code  Apr 20      42        Auth module refactor
+ e5f6g7h8  codex        Apr 18      28        Data pipeline fix
+ i9j0k1l2  claude_code  Apr 17      15        README update
 ...
 
 $ jor list --tool codex
- 1  codex  Apr 18  28  Data pipeline fix
- 2  codex  Apr 15  63  API endpoint migration
+ ID        Tool   Date    Messages  Title
+ e5f6g7h8  codex  Apr 18  28        Data pipeline fix
+ m3n4o5p6  codex  Apr 15  63        API endpoint migration
 ...
 
 $ jor list --query "auth"
@@ -85,22 +86,22 @@ $ jor list --query "auth"
 - `--tool` — filter by source tool (`claude_code`, `codex`)
 - `--query` / `-q` — search titles and first user message
 - `--limit` / `-n` — max results (default 20)
-- `--project` — filter by workspace path
+- `--path` — filter by workspace path
 
 ### `jor convert`
 
 Translates a session to the target tool's native format and writes it. Does NOT launch the tool — prints the command you need to run.
 
 ```bash
-# Convert session #1 to Claude Code format (default)
-$ jor convert 1
+# Convert session to Claude Code format (default)
+$ jor convert a1b2c3d4
 Session written to ~/.claude/projects/.../sessions/abc123.jsonl
 
 To resume, run:
   claude --resume abc123
 
-# Convert session #1 to Codex format
-$ jor convert 1 --codex
+# Convert session to Codex format
+$ jor convert a1b2c3d4 --codex
 Session written to ~/.codex/sessions/rollout-abc123.jsonl
 
 To resume, run:
@@ -123,13 +124,13 @@ Convenience command — runs `jor convert` then launches the tool. For when you 
 
 ```bash
 # Convert and launch in Claude Code (default)
-$ jor open 1
+$ jor open a1b2c3d4
 Session written to ~/.claude/projects/.../sessions/abc123.jsonl
 Launching: claude --resume abc123
 ...
 
 # Convert and launch in Codex
-$ jor open 1 --codex
+$ jor open a1b2c3d4 --codex
 Session written to ~/.codex/sessions/rollout-abc123.jsonl
 Launching: codex --resume abc123
 ...
@@ -405,9 +406,9 @@ jor = "jor.cli:main"
 2. `jor discover` finds sessions from Claude Code and Codex on the local machine
 3. `jor list` shows sessions with tool, title, date, project
 4. `jor list --tool codex` filters correctly
-5. `jor convert 1` writes a Claude Code native session file and prints the resume command
-6. `jor convert 1 --codex` writes a Codex native session file and prints the resume command
-7. `jor open 1` converts and launches `claude --resume` with native conversation history
+5. `jor convert <id>` writes a Claude Code native session file and prints the resume command
+6. `jor convert <id> --codex` writes a Codex native session file and prints the resume command
+7. `jor open <id>` converts and launches `claude --resume` with native conversation history
 8. Claude Code skill wraps the CLI — user can discover and convert sessions from within a session
 9. The whole thing works offline with zero configuration beyond installation
 10. Demo-ready in under 1 week
