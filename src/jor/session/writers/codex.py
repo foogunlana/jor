@@ -3,23 +3,23 @@
 from __future__ import annotations
 
 import json
+import uuid
 from pathlib import Path
 
 from jor.session.schema import JorMessage
 
 
 class CodexWriter:
-    def write(self, messages: list[JorMessage], target_dir: Path, session_id: str) -> Path:
+    def write(self, messages: list[JorMessage], target_dir: Path) -> tuple[str, Path]:
+        """Write messages to target_dir. Returns (session_id, path)."""
         target_dir.mkdir(parents=True, exist_ok=True)
+        session_id = str(uuid.uuid4())
         out = target_dir / f"rollout-{session_id}.jsonl"
-        records = []
-        for msg in messages:
-            records.append(self._to_record(msg))
+        records = [self._to_record(msg) for msg in messages]
         out.write_text("\n".join(json.dumps(r) for r in records) + "\n")
-        return out
+        return session_id, out
 
     def resume_command(self, session_file: Path) -> str:
-        # Strip "rollout-" prefix for the session id
         stem = session_file.stem
         session_id = stem[len("rollout-"):] if stem.startswith("rollout-") else stem
         return f"codex --resume {session_id}"

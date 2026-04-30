@@ -13,9 +13,9 @@ class CodexLauncher:
     def __init__(self, codex_home: Path | None = None) -> None:
         self._home = codex_home or Path.home() / ".codex"
 
-    def launch(self, messages: list[JorMessage], session_id: str) -> None:
+    def launch(self, messages: list[JorMessage]) -> None:
         writer = CodexWriter()
         target_dir = self._home / "sessions"
-        out = writer.write(messages, target_dir, session_id)
+        _, out = writer.write(messages, target_dir)
         cmd = writer.resume_command(out)
         subprocess.run(cmd, shell=True)

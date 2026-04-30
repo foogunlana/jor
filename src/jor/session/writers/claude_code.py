@@ -9,14 +9,13 @@ from jor.session.schema import JorMessage
 
 
 class ClaudeCodeWriter:
-    def write(self, messages: list[JorMessage], target_dir: Path, session_id: str) -> Path:
-        target_dir.mkdir(parents=True, exist_ok=True)
-        out = target_dir / f"{session_id}.jsonl"
-        records = []
-        for msg in messages:
-            records.append(self._to_record(msg, session_id))
-        out.write_text("\n".join(json.dumps(r) for r in records) + "\n")
-        return out
+    def write(self, messages: list[JorMessage], target_path: Path) -> tuple[str, Path]:
+        """Write messages to target_path (full file path). Returns (session_id, path)."""
+        target_path.parent.mkdir(parents=True, exist_ok=True)
+        session_id = target_path.stem
+        records = [self._to_record(msg, session_id) for msg in messages]
+        target_path.write_text("\n".join(json.dumps(r) for r in records) + "\n")
+        return session_id, target_path
 
     def resume_command(self, session_file: Path) -> str:
         session_id = session_file.stem
