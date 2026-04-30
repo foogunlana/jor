@@ -7,3 +7,6 @@
 # Ralph worktrees and logs
 .ralph/worktrees/
 .ralph/logs/
+
+# bv (beads viewer) local config and caches
+.bv/

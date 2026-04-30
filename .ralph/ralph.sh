@@ -3,8 +3,9 @@
 # Ralph Loop - Autonomous engineer relay
 #
 # Usage:
-#   ./ralph.sh [iterations]    Single mode: one bead per iteration, no worktrees
-#   ./ralph.sh -p N            Parallel: N beads at a time, loops until no ready beads
+#   ./ralph.sh [iterations]    Single mode: one bead per iteration (default: 5)
+#   ./ralph.sh 10              Single mode: 10 iterations
+#   ./ralph.sh -p N            Parallel: N beads at a time, loops until no beads left
 #   ./ralph.sh -p N --once     Parallel: N beads, one round only
 #
 # Parallel mode:
@@ -134,10 +135,27 @@ if [ "$PARALLEL" -gt 0 ]; then
             echo -e "${BLUE}› Creating worktree $BEAD on branch $BRANCH${NC}"
             git worktree add "$WT_PATH" -b "$BRANCH" --quiet
 
+            # Fetch bead details on main and build the prompt
+            BEAD_DETAILS=$(bd show "$BEAD" 2>/dev/null || echo "Bead $BEAD — no details available")
+            WORKER_PROMPT="You are working on bead $BEAD in a git worktree. Here are the bead details:
+
+$BEAD_DETAILS
+
+IMPORTANT:
+- Do NOT use bd commands — beads does not work in worktrees
+- Read RALPH.md for the TDD workflow (but skip any bd commands)
+- Just do the work described in the bead, run tests, and commit
+- Your working directory is: $WT_PATH"
+
             echo -e "${GREEN}› Launching ralph for $BEAD (log: .ralph/logs/$BEAD.log)${NC}"
             # Strip ANSI escape codes so log files are plain text
-            # --line-buffered ensures logs stream in real-time
-            (cd "$WT_PATH" && bash .ralph/ralph.sh 1) 2>&1 | sed -l 's/\x1b\[[0-9;]*m//g' > "$LOG_FILE" &
+            # sed -l ensures logs stream in real-time (line-buffered)
+            (cd "$WT_PATH" && claude --chrome --model sonnet --effort medium \
+              --permission-mode acceptEdits --verbose \
+              --allowedTools 'Bash(pytest*)' 'Bash(ruff *)' \
+              --allowedTools 'Bash(uv *)' 'Bash(git *)' \
+              --print "$WORKER_PROMPT" \
+              --output-format stream-json 2>/dev/null) 2>&1 | sed -l 's/\x1b\[[0-9;]*m//g' > "$LOG_FILE" &
             PIDS+=($!)
             ALL_PIDS+=($!)
         done
@@ -211,15 +229,20 @@ if [ "$PARALLEL" -gt 0 ]; then
         echo -e "${DIM}› Merging branches back to main...${NC}"
         git checkout main --quiet
 
+        MERGE_FAILED=false
         for BEAD in "${BEADS[@]}"; do
             BRANCH="ralph/$BEAD"
             echo -e "${BLUE}› Merging $BRANCH${NC}"
-            # Accept main's .beads/ on conflicts — we'll close beads manually
             if ! git merge "$BRANCH" --no-edit --quiet 2>/dev/null; then
-                echo -e "${YELLOW}  Conflict — keeping main's .beads/, merging code${NC}"
-                git checkout --ours .beads/ 2>/dev/null || true
-                git add .beads/
-                git commit --no-edit --quiet 2>/dev/null || true
+                CONFLICTS=$(git diff --name-only --diff-filter=U 2>/dev/null || true)
+                echo -e "${RED}  Conflict in:${NC}"
+                echo "$CONFLICTS" | while read -r f; do
+                    [ -n "$f" ] && echo -e "    $f"
+                done
+                echo -e "${YELLOW}  Aborting merge — resolve manually:${NC}"
+                echo "    git merge $BRANCH"
+                git merge --abort 2>/dev/null || true
+                MERGE_FAILED=true
             fi
         done
 
