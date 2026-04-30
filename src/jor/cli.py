@@ -1,6 +1,19 @@
 """Jor CLI entry point."""
 
+from __future__ import annotations
+
+from pathlib import Path
+
 import click
+
+JOR_HOME = Path.home() / ".jor"
+
+
+def _jor_home() -> Path:
+    home = JOR_HOME
+    home.mkdir(exist_ok=True)
+    (home / "sessions").mkdir(exist_ok=True)
+    return home
 
 
 @click.group()
@@ -11,13 +24,56 @@ def main() -> None:
 @main.command()
 def discover() -> None:
     """Scan the local machine for AI sessions and build the index."""
-    click.echo("Not yet implemented.")
+    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
+    from jor.discovery.connectors.codex import CodexConnector
+    from jor.discovery.scanner import Scanner
+
+    jor_home = _jor_home()
+    connectors = [ClaudeCodeConnector(), CodexConnector()]
+    counts = Scanner(connectors=connectors, jor_home=jor_home).run()
+
+    if not counts:
+        click.echo("No sessions found.")
+        return
+
+    total = sum(counts.values())
+    breakdown = ", ".join(f"{n} {tool}" for tool, n in counts.items())
+    click.echo(f"Found {total} sessions: {breakdown}")
+    click.echo(f"Index updated at {jor_home / 'index.json'}")
 
 
-@main.command()
-def list() -> None:
+@main.command(name="list")
+@click.option("--tool", default=None, help="Filter by source tool (claude_code, codex)")
+@click.option("--query", "-q", default=None, help="Search titles")
+@click.option("--limit", "-n", default=20, show_default=True, help="Max results")
+@click.option("--path", default=None, help="Filter by workspace path")
+def list_sessions(tool: str | None, query: str | None, limit: int, path: str | None) -> None:
     """List indexed sessions."""
-    click.echo("Not yet implemented.")
+    from jor.discovery.index import load_index
+
+    jor_home = _jor_home()
+    index = load_index(jor_home / "index.json")
+    sessions = index.sessions
+
+    if tool:
+        sessions = [s for s in sessions if s.tool == tool]
+    if query:
+        q = query.lower()
+        sessions = [s for s in sessions if q in s.title.lower()]
+    if path:
+        sessions = [s for s in sessions if path in s.project]
+
+    sessions = sessions[:limit]
+
+    if not sessions:
+        click.echo("No sessions found.")
+        return
+
+    click.echo(f"{'ID':<10} {'Tool':<12} {'Date':<12} {'Msgs':>5}  Title")
+    click.echo("-" * 60)
+    for s in sessions:
+        date = s.started_at[:10] if s.started_at else "unknown"
+        click.echo(f"{s.id[:8]:<10} {s.tool:<12} {date:<12} {s.message_count:>5}  {s.title[:40]}")
 
 
 @main.command()
@@ -25,12 +81,57 @@ def list() -> None:
 @click.option("--codex", is_flag=True, help="Convert to Codex format (default: Claude Code)")
 def convert(session_id: str, codex: bool) -> None:
     """Translate a session to the target tool's native format."""
-    click.echo("Not yet implemented.")
+    from jor.discovery.index import load_index
+    from jor.session.reader import read_session
+    from jor.session.writers.claude_code import ClaudeCodeWriter
+    from jor.session.writers.codex import CodexWriter
+
+    jor_home = _jor_home()
+    index = load_index(jor_home / "index.json")
+
+    entry = next((s for s in index.sessions if s.id.startswith(session_id)), None)
+    if entry is None:
+        click.echo(f"Session '{session_id}' not found. Run `jor discover` first.", err=True)
+        raise SystemExit(1)
+
+    session_file = jor_home / "sessions" / f"{entry.id}.jsonl"
+    messages = read_session(session_file)
+
+    if codex:
+        writer = CodexWriter()
+        target_dir = Path.home() / ".codex" / "sessions"
+    else:
+        writer = ClaudeCodeWriter()
+        target_dir = Path.home() / ".claude" / "projects" / "jor-imported" / "sessions"
+
+    out = writer.write(messages, target_dir, entry.id)
+    cmd = writer.resume_command(out)
+    click.echo(f"Session written to {out}")
+    click.echo(f"\nTo resume, run:\n  {cmd}")
 
 
-@main.command()
+@main.command(name="open")
 @click.argument("session_id")
 @click.option("--codex", is_flag=True, help="Open in Codex (default: Claude Code)")
-def open(session_id: str, codex: bool) -> None:
+def open_session(session_id: str, codex: bool) -> None:
     """Convert a session and launch the target tool."""
-    click.echo("Not yet implemented.")
+    from jor.discovery.index import load_index
+    from jor.session.reader import read_session
+    from jor.launchers.claude_code import ClaudeCodeLauncher
+    from jor.launchers.codex import CodexLauncher
+
+    jor_home = _jor_home()
+    index = load_index(jor_home / "index.json")
+
+    entry = next((s for s in index.sessions if s.id.startswith(session_id)), None)
+    if entry is None:
+        click.echo(f"Session '{session_id}' not found. Run `jor discover` first.", err=True)
+        raise SystemExit(1)
+
+    session_file = jor_home / "sessions" / f"{entry.id}.jsonl"
+    messages = read_session(session_file)
+
+    if codex:
+        CodexLauncher().launch(messages, entry.id)
+    else:
+        ClaudeCodeLauncher().launch(messages, entry.id)

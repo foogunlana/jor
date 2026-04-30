@@ -32,13 +32,14 @@ def test_cli_list() -> None:
     assert result.exit_code == 0
 
 
-def test_cli_convert() -> None:
+def test_cli_convert_unknown_session() -> None:
     runner = CliRunner()
-    result = runner.invoke(main, ["convert", "1"])
-    assert result.exit_code == 0
+    result = runner.invoke(main, ["convert", "nonexistent-session-id"])
+    assert result.exit_code == 1
+    assert "not found" in result.output.lower() or "not found" in (result.stderr or "").lower()
 
 
-def test_cli_open() -> None:
+def test_cli_open_unknown_session() -> None:
     runner = CliRunner()
-    result = runner.invoke(main, ["open", "1"])
-    assert result.exit_code == 0
+    result = runner.invoke(main, ["open", "nonexistent-session-id"])
+    assert result.exit_code == 1
