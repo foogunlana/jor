@@ -9,6 +9,9 @@ description = "AI session discovery, conversion, and cross-tool continuation"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
+authors = [
+    { name = "Jor Contributors" },
+]
 keywords = ["ai", "sessions", "claude", "codex", "developer-tools"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -24,6 +27,11 @@ dependencies = [
     "pydantic>=2.0",
     "click>=8.0",
 ]
+
+[project.urls]
+Homepage = "https://github.com/folusoogunlana/jor"
+Repository = "https://github.com/folusoogunlana/jor"
+Issues = "https://github.com/folusoogunlana/jor/issues"
 
 [project.scripts]
 jor = "jor.cli:main"
