@@ -113,7 +113,6 @@ class CodexConnector:
 
         # First user message timestamp not available in codex format — leave empty
         started_at = ""
-        user_msgs = [m for m in messages if m.role == "user"]
 
         return IndexEntry(
             id=entry_id,
