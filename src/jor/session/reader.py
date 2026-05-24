@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from jor.discovery.index import IndexEntry
 from jor.session.schema import JorMessage
 
 
@@ -17,29 +18,49 @@ def read_session(path: Path) -> list[JorMessage]:
     ]
 
 
-def format_summary(messages: list[JorMessage], title: str, source_tool: str) -> str:
+def format_summary(messages: list[JorMessage], entry: IndexEntry) -> str:
+    date = entry.started_at[:10] if entry.started_at else ""
     lines = [
-        f"# Continuing session: {title}",
-        f"# Originally in: {source_tool}",
-        f"# Messages: {len(messages)}",
+        f"# Session: {entry.title}",
+        f"Tool: {entry.tool}",
+        f"Model: {entry.model}",
+        f"Project: {entry.project}",
+        f"Date: {date}",
         "",
     ]
-    shown = messages[-50:] if len(messages) > 50 else messages
-    if len(messages) > 50:
-        lines.append(f"*[Showing last 50 of {len(messages)} messages]*\n")
+
+    total = len(messages)
+    if total > 50:
+        omitted = total - 50
+        lines.append(f"*[{omitted} messages omitted — showing last 50]*\n")
+        shown = messages[-50:]
+    else:
+        shown = messages
 
     for msg in shown:
         if msg.role == "user":
-            lines.append(f"**User:** {msg.content}")
+            lines.append(f"User: {msg.content}")
         elif msg.role == "assistant":
             if msg.content:
-                lines.append(f"**Assistant:** {msg.content}")
-            if msg.tool_calls:
-                for tc in msg.tool_calls:
-                    lines.append(f"  *[Tool call: {tc.name}]*")
-        elif msg.role == "tool_result":
-            lines.append(f"  *[Tool result]*")
-        elif msg.role == "system":
-            lines.append(f"*[System: {msg.content}]*")
+                lines.append(f"Assistant: {msg.content}")
+            for tc in msg.tool_calls or []:
+                lines.append(f"  [Tool: {tc.name}]")
+
+    all_files: list[str] = []
+    for msg in messages:
+        if msg.files:
+            all_files.extend(msg.files)
+
+    if all_files:
+        lines.append("")
+        lines.append("## Files")
+        for f in all_files:
+            lines.append(f"- {f}")
 
     return "\n".join(lines)
+
+
+def format_full(path: Path) -> str:
+    if not path.exists():
+        raise FileNotFoundError(path)
+    return path.read_text()
