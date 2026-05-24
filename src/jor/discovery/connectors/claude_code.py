@@ -22,7 +22,7 @@ class ClaudeCodeConnector:
 
     def scan(self, jor_home: Path) -> list[IndexEntry]:
         entries: list[IndexEntry] = []
-        for session_path in self._home.glob("projects/*/sessions/*.jsonl"):
+        for session_path in self._home.glob("projects/*/*.jsonl"):
             entry = self._process(session_path, jor_home)
             if entry is not None:
                 entries.append(entry)

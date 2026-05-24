@@ -225,7 +225,7 @@ def test_round_trip_parseable_by_connector(tmp_path: Path) -> None:
     ]
 
     # Place output file where the connector expects it
-    session_dir = tmp_path / ".claude" / "projects" / "proj" / "sessions"
+    session_dir = tmp_path / ".claude" / "projects" / "proj"
     session_dir.mkdir(parents=True)
     target = session_dir / "roundtrip.jsonl"
 

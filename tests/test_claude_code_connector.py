@@ -10,7 +10,7 @@ FIXTURE = Path(__file__).parent / "fixtures" / "claude_code_session.jsonl"
 @pytest.fixture
 def claude_home(tmp_path: Path) -> Path:
     """Set up a fake ~/.claude directory with one session."""
-    project_dir = tmp_path / ".claude" / "projects" / "-Users-foo-code-my-app" / "sessions"
+    project_dir = tmp_path / ".claude" / "projects" / "-Users-foo-code-my-app"
     project_dir.mkdir(parents=True)
     session_file = project_dir / "abc-123-session.jsonl"
     session_file.write_text(FIXTURE.read_text())
@@ -148,7 +148,7 @@ def test_scan_title_truncated_to_80_chars(tmp_path: Path, jor_home: Path):
     """Title is truncated to 80 chars if first user message is long."""
     from jor.discovery.connectors.claude_code import ClaudeCodeConnector
     long_msg = "A" * 100
-    session_dir = tmp_path / ".claude" / "projects" / "proj" / "sessions"
+    session_dir = tmp_path / ".claude" / "projects" / "proj"
     session_dir.mkdir(parents=True)
     import json
     line = json.dumps({"type": "user", "message": {"role": "user", "content": long_msg}, "timestamp": "2026-01-01T00:00:00Z", "sessionId": "s1", "cwd": "/proj"})
@@ -161,7 +161,7 @@ def test_scan_title_truncated_to_80_chars(tmp_path: Path, jor_home: Path):
 def test_scan_handles_empty_file(tmp_path: Path, jor_home: Path):
     """Empty session file is skipped without crashing."""
     from jor.discovery.connectors.claude_code import ClaudeCodeConnector
-    session_dir = tmp_path / ".claude" / "projects" / "proj" / "sessions"
+    session_dir = tmp_path / ".claude" / "projects" / "proj"
     session_dir.mkdir(parents=True)
     (session_dir / "empty.jsonl").write_text("")
     c = ClaudeCodeConnector(claude_home=tmp_path / ".claude")
@@ -172,7 +172,7 @@ def test_scan_handles_empty_file(tmp_path: Path, jor_home: Path):
 def test_scan_handles_malformed_file(tmp_path: Path, jor_home: Path):
     """Malformed JSONL is skipped without crashing."""
     from jor.discovery.connectors.claude_code import ClaudeCodeConnector
-    session_dir = tmp_path / ".claude" / "projects" / "proj" / "sessions"
+    session_dir = tmp_path / ".claude" / "projects" / "proj"
     session_dir.mkdir(parents=True)
     (session_dir / "bad.jsonl").write_text("not json at all\n{also bad}\n")
     c = ClaudeCodeConnector(claude_home=tmp_path / ".claude")
