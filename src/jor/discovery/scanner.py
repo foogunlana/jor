@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from jor.discovery.connectors.base import Connector
-from jor.discovery.index import SessionIndex, load_index, save_index, upsert_session
+from jor.discovery.index import load_index, save_index, upsert_session
 
 
 class Scanner:
