@@ -49,18 +49,21 @@ def discover() -> None:
 
 
 @main.command(name="list")
-@click.option("--tool", default=None, help="Filter by source tool (claude_code, codex)")
+@click.option("--codex", is_flag=True, help="Show only Codex sessions")
+@click.option("--claude-code", "claude_code", is_flag=True, help="Show only Claude Code sessions")
 @click.option("--query", "-q", default=None, help="Search titles")
 @click.option("--limit", "-n", default=20, show_default=True, help="Max results")
 @click.option("--path", default=None, help="Filter by workspace path")
-def list_sessions(tool: str | None, query: str | None, limit: int, path: str | None) -> None:
+def list_sessions(codex: bool, claude_code: bool, query: str | None, limit: int, path: str | None) -> None:
     """List indexed sessions."""
     jor_home = _jor_home()
     index = load_index(jor_home / "index.json")
     sessions = index.sessions
 
-    if tool:
-        sessions = [s for s in sessions if s.tool == tool]
+    if codex:
+        sessions = [s for s in sessions if s.tool == "codex"]
+    elif claude_code:
+        sessions = [s for s in sessions if s.tool == "claude_code"]
     if query:
         q = query.lower()
         sessions = [s for s in sessions if q in s.title.lower()]

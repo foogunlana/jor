@@ -111,7 +111,7 @@ def test_list_filter_by_tool(tmp_path: Path) -> None:
         _entry(id="bbb00000-0000-0000-0000-000000000000", tool="codex"),
     ])
     with patch("jor.cli.load_index", return_value=index):
-        result = runner.invoke(main, ["list", "--tool", "codex"])
+        result = runner.invoke(main, ["list", "--codex"])
 
     assert result.exit_code == 0
     assert "bbb00000" in result.output
