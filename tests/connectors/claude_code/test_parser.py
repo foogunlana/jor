@@ -11,7 +11,7 @@ from jor.core.schema import JorMessage
 
 _connector = ClaudeCodeConnector(claude_home=Path("/fake"))
 extract_metadata = _connector.extract_metadata
-parse_record = _connector.parse_record
+from_record = _connector.from_record
 
 
 # ---------------------------------------------------------------------------
@@ -85,7 +85,7 @@ def test_parse_user_message():
         "timestamp": "2026-01-01T00:00:00Z",
         "sessionId": "s1",
     }
-    result = parse_record(rec, "s1")
+    result = from_record(rec, "s1")
     assert isinstance(result, JorMessage)
     assert result.role == "user"
     assert result.content == "hello"
@@ -99,7 +99,7 @@ def test_parse_user_message_list_content():
         "timestamp": "t",
         "sessionId": "s1",
     }
-    result = parse_record(rec, "s1")
+    result = from_record(rec, "s1")
     assert result.content == "hello world"
 
 
@@ -111,7 +111,7 @@ def test_parse_user_preserves_git_branch():
         "sessionId": "s1",
         "gitBranch": "feature/auth",
     }
-    result = parse_record(rec, "s1")
+    result = from_record(rec, "s1")
     assert result.metadata == {"gitBranch": "feature/auth"}
 
 
@@ -127,7 +127,7 @@ def test_parse_assistant_text():
         "timestamp": "t",
         "sessionId": "s1",
     }
-    result = parse_record(rec, "s1")
+    result = from_record(rec, "s1")
     assert result.role == "assistant"
     assert result.content == "I can help"
     assert result.tool_calls is None
@@ -146,7 +146,7 @@ def test_parse_assistant_with_tool_use():
         "timestamp": "t",
         "sessionId": "s1",
     }
-    result = parse_record(rec, "s1")
+    result = from_record(rec, "s1")
     assert result.tool_calls is not None
     assert len(result.tool_calls) == 1
     assert result.tool_calls[0].name == "Read"
@@ -160,7 +160,7 @@ def test_parse_assistant_string_content():
         "timestamp": "t",
         "sessionId": "s1",
     }
-    result = parse_record(rec, "s1")
+    result = from_record(rec, "s1")
     assert result.content == "simple text"
 
 
@@ -179,7 +179,7 @@ def test_parse_tool_result():
         "timestamp": "t",
         "sessionId": "s1",
     }
-    result = parse_record(rec, "s1")
+    result = from_record(rec, "s1")
     assert isinstance(result, list)
     assert len(result) == 1
     assert result[0].role == "tool_result"
@@ -200,7 +200,7 @@ def test_parse_tool_result_multiple_blocks():
         "timestamp": "t",
         "sessionId": "s1",
     }
-    result = parse_record(rec, "s1")
+    result = from_record(rec, "s1")
     assert isinstance(result, list)
     assert len(result) == 2
 
@@ -212,8 +212,8 @@ def test_parse_tool_result_multiple_blocks():
 
 def test_parse_unknown_type_returns_none():
     rec = {"type": "unknown", "message": {}, "timestamp": "t", "sessionId": "s1"}
-    assert parse_record(rec, "s1") is None
+    assert from_record(rec, "s1") is None
 
 
 def test_parse_empty_record_returns_none():
-    assert parse_record({}, "s1") is None
+    assert from_record({}, "s1") is None

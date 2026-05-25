@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 
 from jor.core.schema import JorMessage, ToolCall, ToolResult
-from jor.connectors.claude_code.writer import ClaudeCodeWriter
-from jor.connectors.codex.writer import CodexWriter
+from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
 
 @pytest.fixture()

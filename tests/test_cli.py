@@ -172,20 +172,16 @@ def test_convert_default_converts_to_opposite_tool(tmp_path: Path) -> None:
     entry = _entry(tool="claude_code")
     index = SessionIndex(sessions=[entry])
     messages = [MagicMock()]
+    mock_connector = MagicMock()
+    mock_connector.write_session.return_value = ("xyz", "codex resume xyz", tmp_path / "out.jsonl")
 
     with patch("jor.cli.load_index", return_value=index), \
          patch("jor.cli.read_session", return_value=messages), \
-         patch("jor.cli.CodexWriter") as MockWriter:
-        mock_writer = MockWriter.return_value
-        out_path = tmp_path / "rollout-xyz.jsonl"
-        mock_writer.write.return_value = ("xyz", out_path)
-        mock_writer.resume_command.return_value = "codex resume xyz"
-
+         patch("jor.cli._connector_for", return_value=mock_connector):
         result = runner.invoke(main, ["convert", "abc12345"])
 
     assert result.exit_code == 0
-    assert str(out_path) in result.output
-    mock_writer.write.assert_called_once()
+    mock_connector.write_session.assert_called_once()
 
 
 def test_convert_codex_flag_writes_codex_format(tmp_path: Path) -> None:
@@ -193,21 +189,17 @@ def test_convert_codex_flag_writes_codex_format(tmp_path: Path) -> None:
     entry = _entry()
     index = SessionIndex(sessions=[entry])
     messages = [MagicMock()]
+    mock_connector = MagicMock()
+    mock_connector.write_session.return_value = ("xyz", "codex resume xyz", tmp_path / "out.jsonl")
 
     with patch("jor.cli.load_index", return_value=index), \
          patch("jor.cli.read_session", return_value=messages), \
-         patch("jor.cli.CodexWriter") as MockWriter:
-        mock_writer = MockWriter.return_value
-        out_path = tmp_path / "rollout-xyz.jsonl"
-        mock_writer.write.return_value = ("xyz", out_path)
-        mock_writer.resume_command.return_value = "codex --resume xyz"
-
+         patch("jor.cli._connector_for", return_value=mock_connector):
         result = runner.invoke(main, ["convert", "abc12345", "--codex"])
 
     assert result.exit_code == 0
-    assert str(out_path) in result.output
-    assert "codex --resume xyz" in result.output
-    mock_writer.write.assert_called_once()
+    assert "codex resume xyz" in result.output
+    mock_connector.write_session.assert_called_once()
 
 
 def test_convert_unknown_id_prints_error_and_exits(tmp_path: Path) -> None:
@@ -225,15 +217,12 @@ def test_convert_prints_resume_command(tmp_path: Path) -> None:
     entry = _entry(tool="codex")
     index = SessionIndex(sessions=[entry])
     messages = [MagicMock()]
+    mock_connector = MagicMock()
+    mock_connector.write_session.return_value = ("sid", "claude --resume sid", tmp_path / "out.jsonl")
 
     with patch("jor.cli.load_index", return_value=index), \
          patch("jor.cli.read_session", return_value=messages), \
-         patch("jor.cli.ClaudeCodeWriter") as MockWriter:
-        mock_writer = MockWriter.return_value
-        out_path = tmp_path / "session.jsonl"
-        mock_writer.write.return_value = ("sid", out_path)
-        mock_writer.resume_command.return_value = "claude --resume sid"
-
+         patch("jor.cli._connector_for", return_value=mock_connector):
         result = runner.invoke(main, ["convert", "abc12345"])
 
     assert "claude --resume sid" in result.output
@@ -249,15 +238,15 @@ def test_open_calls_launcher(tmp_path: Path) -> None:
     entry = _entry()
     index = SessionIndex(sessions=[entry])
     messages = [MagicMock()]
+    mock_connector = MagicMock()
 
     with patch("jor.cli.load_index", return_value=index), \
          patch("jor.cli.read_session", return_value=messages), \
-         patch("jor.cli.ClaudeCodeLauncher") as MockLauncher:
-        mock_launcher = MockLauncher.return_value
+         patch("jor.cli._connector_for", return_value=mock_connector):
         result = runner.invoke(main, ["open", "abc12345"])
 
     assert result.exit_code == 0
-    mock_launcher.launch.assert_called_once()
+    mock_connector.launch.assert_called_once()
 
 
 def test_open_codex_flag_uses_codex_launcher(tmp_path: Path) -> None:
@@ -265,15 +254,16 @@ def test_open_codex_flag_uses_codex_launcher(tmp_path: Path) -> None:
     entry = _entry()
     index = SessionIndex(sessions=[entry])
     messages = [MagicMock()]
+    mock_connector = MagicMock()
 
     with patch("jor.cli.load_index", return_value=index), \
          patch("jor.cli.read_session", return_value=messages), \
-         patch("jor.cli.CodexLauncher") as MockLauncher:
-        mock_launcher = MockLauncher.return_value
+         patch("jor.cli._connector_for", return_value=mock_connector) as mock_for:
         result = runner.invoke(main, ["open", "abc12345", "--codex"])
 
     assert result.exit_code == 0
-    mock_launcher.launch.assert_called_once()
+    mock_for.assert_called_with("codex")
+    mock_connector.launch.assert_called_once()
 
 
 def test_open_unknown_id_exits_nonzero(tmp_path: Path) -> None:

@@ -11,14 +11,14 @@ from jor.core.schema import JorMessage, ToolCall, ToolResult
 
 
 def test_codex_writer_extends_base_writer() -> None:
-    from jor.connectors.base import BaseWriter
-    from jor.connectors.codex.writer import CodexWriter
+    from jor.connectors.base import BaseConnector
+    from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
-    assert isinstance(CodexWriter(), BaseWriter)
+    assert isinstance(CodexWriter(), BaseConnector)
 
 
 def test_codex_writer_write_returns_session_id_and_path(tmp_path: Path) -> None:
-    from jor.connectors.codex.writer import CodexWriter
+    from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
     messages = [JorMessage(id="m1", role="user", content="hello")]
     writer = CodexWriter()
@@ -28,7 +28,7 @@ def test_codex_writer_write_returns_session_id_and_path(tmp_path: Path) -> None:
 
 
 def test_codex_writer_maps_user_message(tmp_path: Path) -> None:
-    from jor.connectors.codex.writer import CodexWriter
+    from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
     messages = [JorMessage(id="m1", role="user", content="hello world")]
     _, out_path = CodexWriter().write(messages, tmp_path)
@@ -41,7 +41,7 @@ def test_codex_writer_maps_user_message(tmp_path: Path) -> None:
 
 
 def test_codex_writer_maps_assistant_message(tmp_path: Path) -> None:
-    from jor.connectors.codex.writer import CodexWriter
+    from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
     messages = [JorMessage(id="m1", role="assistant", content="I can help")]
     _, out_path = CodexWriter().write(messages, tmp_path)
@@ -52,7 +52,7 @@ def test_codex_writer_maps_assistant_message(tmp_path: Path) -> None:
 
 
 def test_codex_writer_maps_system_message(tmp_path: Path) -> None:
-    from jor.connectors.codex.writer import CodexWriter
+    from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
     messages = [JorMessage(id="m1", role="system", content="You are helpful")]
     _, out_path = CodexWriter().write(messages, tmp_path)
@@ -63,7 +63,7 @@ def test_codex_writer_maps_system_message(tmp_path: Path) -> None:
 
 
 def test_codex_writer_maps_tool_calls(tmp_path: Path) -> None:
-    from jor.connectors.codex.writer import CodexWriter
+    from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
     tc = ToolCall(id="tc1", name="bash", input={"cmd": "ls -la"})
     messages = [
@@ -83,7 +83,7 @@ def test_codex_writer_maps_tool_calls(tmp_path: Path) -> None:
 
 
 def test_codex_writer_maps_multiple_tool_calls(tmp_path: Path) -> None:
-    from jor.connectors.codex.writer import CodexWriter
+    from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
     tc1 = ToolCall(id="tc1", name="read_file", input={"path": "/foo"})
     tc2 = ToolCall(id="tc2", name="write_file", input={"path": "/bar", "content": "x"})
@@ -101,7 +101,7 @@ def test_codex_writer_maps_multiple_tool_calls(tmp_path: Path) -> None:
 
 
 def test_codex_writer_maps_tool_result_to_role_tool(tmp_path: Path) -> None:
-    from jor.connectors.codex.writer import CodexWriter
+    from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
     tr = ToolResult(tool_call_id="tc1", content="file contents")
     messages = [
@@ -116,7 +116,7 @@ def test_codex_writer_maps_tool_result_to_role_tool(tmp_path: Path) -> None:
 
 
 def test_codex_writer_output_is_valid_jsonl(tmp_path: Path) -> None:
-    from jor.connectors.codex.writer import CodexWriter
+    from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
     tc = ToolCall(id="tc1", name="bash", input={"cmd": "echo hi"})
     tr = ToolResult(tool_call_id="tc1", content="hi")
@@ -138,7 +138,7 @@ def test_codex_writer_output_is_valid_jsonl(tmp_path: Path) -> None:
 
 def test_codex_writer_round_trip(tmp_path: Path) -> None:
     """Messages written out can be re-read and verify the full structure."""
-    from jor.connectors.codex.writer import CodexWriter
+    from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
     tc = ToolCall(id="tc99", name="grep", input={"pattern": "foo", "path": "."})
     tr = ToolResult(tool_call_id="tc99", content="match: foo.py:10")

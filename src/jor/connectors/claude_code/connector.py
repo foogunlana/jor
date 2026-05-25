@@ -1,4 +1,4 @@
-"""Discover and import Claude Code sessions into jor.
+"""Claude Code connector — reads, writes, and launches sessions.
 
 Claude Code stores sessions as JSONL files at:
     ~/.claude/projects/<project-name>/<session-uuid>.jsonl
@@ -18,16 +18,19 @@ from jor.core.schema import JorMessage, ToolCall, ToolResult
 
 
 class ClaudeCodeConnector(BaseConnector):
-    """Scan ~/.claude/projects/ for session files and convert to jor format."""
+    """Read, write, and launch Claude Code sessions."""
 
     TOOL_NAME = "claude_code"
     GLOB_PATTERN = "projects/*/*.jsonl"
     DETECT_PATH = "projects"
     DEFAULT_HOME = Path.home() / ".claude"
     STRICT_JSON = True
+    RESUME_CMD = "claude --resume {session_id}"
 
     def __init__(self, claude_home: Path | None = None) -> None:
         super().__init__(home_path=claude_home)
+
+    # --- Reading ---
 
     def extract_metadata(self, records: list[dict], session_path: Path) -> dict:
         source_id = session_path.stem
@@ -62,7 +65,7 @@ class ClaudeCodeConnector(BaseConnector):
             "title": title,
         }
 
-    def parse_record(self, record: dict, source_id: str) -> JorMessage | list[JorMessage] | None:
+    def from_record(self, record: dict, source_id: str) -> JorMessage | list[JorMessage] | None:
         msg_type = record.get("type", "")
         msg = record.get("message", {})
         timestamp = record.get("timestamp")
@@ -138,3 +141,69 @@ class ClaudeCodeConnector(BaseConnector):
                 return results if results else None
 
         return None
+
+    # --- Writing ---
+
+    def to_record(self, msg: JorMessage, session_id: str) -> dict:
+        base = {
+            "sessionId": session_id,
+            "timestamp": msg.timestamp or "",
+        }
+        if msg.role == "user":
+            return {**base, "type": "user", "message": {"role": "user", "content": msg.content}}
+
+        elif msg.role == "assistant":
+            content_blocks = []
+            if msg.content:
+                content_blocks.append({"type": "text", "text": msg.content})
+            if msg.tool_calls:
+                for tc in msg.tool_calls:
+                    content_blocks.append({
+                        "type": "tool_use",
+                        "id": tc.id,
+                        "name": tc.name,
+                        "input": tc.input,
+                    })
+            return {**base, "type": "assistant", "message": {"role": "assistant", "content": content_blocks}}
+
+        elif msg.role == "tool_result":
+            tool_call_id = msg.tool_result.tool_call_id if msg.tool_result else ""
+            return {
+                **base,
+                "type": "tool_result",
+                "message": {
+                    "role": "tool_result",
+                    "content": [{
+                        "type": "tool_result",
+                        "tool_use_id": tool_call_id,
+                        "content": msg.content,
+                    }],
+                },
+            }
+
+        else:
+            return {**base, "type": msg.role, "message": {"role": msg.role, "content": msg.content}}
+
+    def write(self, messages: list[JorMessage], target_path: Path) -> tuple[str, Path]:
+        """Write messages to target_path (full file path). Returns (session_id, path)."""
+        session_id = target_path.stem
+        self.write_jsonl(messages, target_path, session_id)
+        return session_id, target_path
+
+    def resume_command(self, session_file: Path) -> str:
+        return f"claude --resume {session_file.stem}"
+
+    def write_session(self, messages: list[JorMessage], project: str | None) -> tuple[str, str, Path]:
+        project_dir = _project_dir_name(project) if project else "jor-imported"
+        target_dir = self._home / "projects" / project_dir
+        sid = str(uuid.uuid4())
+        _, path = self.write(messages, target_dir / f"{sid}.jsonl")
+        return sid, self.resume_command(path), path
+
+
+def _project_dir_name(project_path: str) -> str:
+    """Convert a project path to Claude Code's project directory name.
+
+    /Users/foo/code/bar -> -Users-foo-code-bar
+    """
+    return project_path.replace("/", "-")

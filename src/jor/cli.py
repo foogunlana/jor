@@ -7,16 +7,21 @@ from pathlib import Path
 import click
 
 from jor.connectors.claude_code.connector import ClaudeCodeConnector
-from jor.connectors.claude_code.launcher import ClaudeCodeLauncher
-from jor.connectors.claude_code.writer import ClaudeCodeWriter
 from jor.connectors.codex.connector import CodexConnector
-from jor.connectors.codex.launcher import CodexLauncher
-from jor.connectors.codex.writer import CodexWriter
 from jor.core.index import load_index
 from jor.core.reader import read_session
 from jor.core.scanner import Scanner
 
 JOR_HOME = Path.home() / ".jor"
+
+CONNECTORS = {
+    "claude_code": ClaudeCodeConnector,
+    "codex": CodexConnector,
+}
+
+
+def _connector_for(tool: str) -> ClaudeCodeConnector | CodexConnector:
+    return CONNECTORS[tool]()
 
 
 def _jor_home() -> Path:
@@ -116,16 +121,8 @@ def convert(session_id: str, codex: bool, claude_code: bool) -> None:
     session_file = jor_home / "sessions" / f"{entry.id}.jsonl"
     messages = read_session(session_file)
 
-    if target == "codex":
-        writer = CodexWriter()
-        target_dir = Path.home() / ".codex" / "sessions"
-        _, out = writer.write(messages, target_dir)
-    else:
-        writer = ClaudeCodeWriter()
-        target_dir = Path.home() / ".claude" / "projects" / "jor-imported"
-        _, out = writer.write(messages, target_dir / f"{entry.id}.jsonl")
-
-    cmd = writer.resume_command(out)
+    connector = _connector_for(target)
+    _, cmd, out = connector.write_session(messages, entry.project)
     click.echo(f"Session written to {out}")
     click.echo(f"\nTo resume, run:\n  {cmd}")
 
@@ -165,7 +162,5 @@ def open_session(session_id: str, codex: bool, claude_code: bool) -> None:
     same_tool = entry.tool == target
     source_id = entry.source_id if same_tool else None
 
-    if target == "codex":
-        CodexLauncher().launch(messages, session_id=source_id, project=entry.project)
-    else:
-        ClaudeCodeLauncher().launch(messages, session_id=source_id, project=entry.project)
+    connector = _connector_for(target)
+    connector.launch(messages, session_id=source_id, project=entry.project)

@@ -16,10 +16,10 @@ from jor.core.schema import JorMessage, ToolCall, ToolResult
 
 
 def test_claude_code_writer_extends_base_writer() -> None:
-    from jor.connectors.base import BaseWriter
-    from jor.connectors.claude_code.writer import ClaudeCodeWriter
+    from jor.connectors.base import BaseConnector
+    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
 
-    assert isinstance(ClaudeCodeWriter(), BaseWriter)
+    assert isinstance(ClaudeCodeWriter(), BaseConnector)
 
 
 # ---------------------------------------------------------------------------
@@ -28,7 +28,7 @@ def test_claude_code_writer_extends_base_writer() -> None:
 
 
 def test_write_returns_session_id_and_path(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.writer import ClaudeCodeWriter
+    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
 
     msgs = [JorMessage(id="m1", role="user", content="hello")]
     session_id, out_path = ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
@@ -38,7 +38,7 @@ def test_write_returns_session_id_and_path(tmp_path: Path) -> None:
 
 
 def test_write_creates_file_at_target_path(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.writer import ClaudeCodeWriter
+    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
 
     target = tmp_path / "session.jsonl"
     msgs = [JorMessage(id="m1", role="user", content="hello")]
@@ -53,7 +53,7 @@ def test_write_creates_file_at_target_path(tmp_path: Path) -> None:
 
 
 def test_each_line_has_required_keys(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.writer import ClaudeCodeWriter
+    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
 
     msgs = [JorMessage(id="m1", role="user", content="hello", timestamp="2026-01-01T00:00:00Z")]
     ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
@@ -67,7 +67,7 @@ def test_each_line_has_required_keys(tmp_path: Path) -> None:
 
 
 def test_session_id_is_consistent_across_lines(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.writer import ClaudeCodeWriter
+    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
 
     msgs = [
         JorMessage(id="m1", role="user", content="hello"),
@@ -85,7 +85,7 @@ def test_session_id_is_consistent_across_lines(tmp_path: Path) -> None:
 
 
 def test_user_message_maps_to_type_user(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.writer import ClaudeCodeWriter
+    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
 
     msgs = [JorMessage(id="m1", role="user", content="hello")]
     ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
@@ -96,7 +96,7 @@ def test_user_message_maps_to_type_user(tmp_path: Path) -> None:
 
 
 def test_assistant_message_maps_to_type_assistant(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.writer import ClaudeCodeWriter
+    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
 
     msgs = [JorMessage(id="m1", role="assistant", content="here you go")]
     ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
@@ -106,7 +106,7 @@ def test_assistant_message_maps_to_type_assistant(tmp_path: Path) -> None:
 
 
 def test_tool_result_message_maps_to_type_tool_result(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.writer import ClaudeCodeWriter
+    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
 
     msgs = [
         JorMessage(
@@ -127,7 +127,7 @@ def test_tool_result_message_maps_to_type_tool_result(tmp_path: Path) -> None:
 
 
 def test_assistant_with_tool_calls_produces_tool_use_content_block(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.writer import ClaudeCodeWriter
+    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
 
     tc = ToolCall(id="tc1", name="Read", input={"file_path": "/foo.py"})
     msgs = [JorMessage(id="m1", role="assistant", content="reading file", tool_calls=[tc])]
@@ -143,7 +143,7 @@ def test_assistant_with_tool_calls_produces_tool_use_content_block(tmp_path: Pat
 
 
 def test_assistant_text_included_alongside_tool_use(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.writer import ClaudeCodeWriter
+    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
 
     tc = ToolCall(id="tc1", name="Read", input={"file_path": "/foo.py"})
     msgs = [JorMessage(id="m1", role="assistant", content="reading file", tool_calls=[tc])]
@@ -156,7 +156,7 @@ def test_assistant_text_included_alongside_tool_use(tmp_path: Path) -> None:
 
 
 def test_tool_result_content_block_structure(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.writer import ClaudeCodeWriter
+    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
 
     msgs = [
         JorMessage(
@@ -182,7 +182,7 @@ def test_tool_result_content_block_structure(tmp_path: Path) -> None:
 
 
 def test_timestamp_preserved_in_output(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.writer import ClaudeCodeWriter
+    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
 
     ts = "2026-04-30T12:00:00Z"
     msgs = [JorMessage(id="m1", role="user", content="hi", timestamp=ts)]
@@ -192,7 +192,7 @@ def test_timestamp_preserved_in_output(tmp_path: Path) -> None:
 
 
 def test_missing_timestamp_defaults_to_empty_string(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.writer import ClaudeCodeWriter
+    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
 
     msgs = [JorMessage(id="m1", role="user", content="hi")]
     ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
@@ -207,7 +207,7 @@ def test_missing_timestamp_defaults_to_empty_string(tmp_path: Path) -> None:
 
 def test_round_trip_parseable_by_connector(tmp_path: Path) -> None:
     """Writer output can be re-read by the ClaudeCodeConnector."""
-    from jor.connectors.claude_code.writer import ClaudeCodeWriter
+    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
     from jor.connectors.claude_code.connector import ClaudeCodeConnector
 
     tc = ToolCall(id="tc1", name="Read", input={"file_path": "/foo.py"})

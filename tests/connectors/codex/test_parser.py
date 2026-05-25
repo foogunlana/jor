@@ -11,7 +11,7 @@ from jor.core.schema import JorMessage
 
 _connector = CodexConnector(codex_home=Path("/fake"))
 extract_metadata = _connector.extract_metadata
-parse_record = _connector.parse_record
+from_record = _connector.from_record
 
 
 # ---------------------------------------------------------------------------
@@ -82,12 +82,12 @@ def test_extract_metadata_empty_records():
 
 def test_parse_session_meta_returns_none():
     rec = {"type": "session_meta", "payload": {"id": "x"}}
-    assert parse_record(rec, "s1") is None
+    assert from_record(rec, "s1") is None
 
 
 def test_parse_event_msg_returns_none():
     rec = {"type": "event_msg", "payload": {"type": "token_count"}}
-    assert parse_record(rec, "s1") is None
+    assert from_record(rec, "s1") is None
 
 
 # ---------------------------------------------------------------------------
@@ -100,7 +100,7 @@ def test_parse_user_message():
         "type": "response_item",
         "payload": {"type": "message", "role": "user", "content": "hello"},
     }
-    result = parse_record(rec, "s1")
+    result = from_record(rec, "s1")
     assert isinstance(result, JorMessage)
     assert result.role == "user"
     assert result.content == "hello"
@@ -112,7 +112,7 @@ def test_parse_developer_mapped_to_system():
         "type": "response_item",
         "payload": {"type": "message", "role": "developer", "content": "be helpful"},
     }
-    result = parse_record(rec, "s1")
+    result = from_record(rec, "s1")
     assert result.role == "system"
 
 
@@ -121,7 +121,7 @@ def test_parse_assistant_message():
         "type": "response_item",
         "payload": {"type": "message", "role": "assistant", "content": [{"type": "output_text", "text": "I can help"}]},
     }
-    result = parse_record(rec, "s1")
+    result = from_record(rec, "s1")
     assert result.role == "assistant"
     assert result.content == "I can help"
 
@@ -141,7 +141,7 @@ def test_parse_function_call():
             "call_id": "call-1",
         },
     }
-    result = parse_record(rec, "s1")
+    result = from_record(rec, "s1")
     assert result.role == "assistant"
     assert result.tool_calls is not None
     assert len(result.tool_calls) == 1
@@ -160,7 +160,7 @@ def test_parse_function_call_bad_json_args():
             "call_id": "call-2",
         },
     }
-    result = parse_record(rec, "s1")
+    result = from_record(rec, "s1")
     assert result.tool_calls[0].input == {"raw": "not json"}
 
 
@@ -178,7 +178,7 @@ def test_parse_function_call_output():
             "output": "file contents here",
         },
     }
-    result = parse_record(rec, "s1")
+    result = from_record(rec, "s1")
     assert result.role == "tool_result"
     assert result.content == "file contents here"
     assert result.tool_result.tool_call_id == "call-1"
@@ -194,4 +194,4 @@ def test_parse_unknown_payload_type_returns_none():
         "type": "response_item",
         "payload": {"type": "unknown_thing"},
     }
-    assert parse_record(rec, "s1") is None
+    assert from_record(rec, "s1") is None
