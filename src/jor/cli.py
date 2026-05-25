@@ -70,6 +70,7 @@ def list_sessions(codex: bool, claude_code: bool, query: str | None, limit: int,
     if path:
         sessions = [s for s in sessions if path in s.project]
 
+    sessions.sort(key=lambda s: s.started_at or "", reverse=True)
     sessions = sessions[:limit]
 
     if not sessions:
