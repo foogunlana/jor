@@ -166,25 +166,25 @@ def test_list_filter_by_path(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def test_convert_default_writes_claude_code_format(tmp_path: Path) -> None:
+def test_convert_default_converts_to_opposite_tool(tmp_path: Path) -> None:
+    """A claude_code session with no flags should convert to codex."""
     runner = CliRunner()
-    entry = _entry()
+    entry = _entry(tool="claude_code")
     index = SessionIndex(sessions=[entry])
     messages = [MagicMock()]
 
     with patch("jor.cli.load_index", return_value=index), \
          patch("jor.cli.read_session", return_value=messages), \
-         patch("jor.cli.ClaudeCodeWriter") as MockWriter:
+         patch("jor.cli.CodexWriter") as MockWriter:
         mock_writer = MockWriter.return_value
-        out_path = tmp_path / "out.jsonl"
-        mock_writer.write.return_value = ("sess-id", out_path)
-        mock_writer.resume_command.return_value = "claude --resume sess-id"
+        out_path = tmp_path / "rollout-xyz.jsonl"
+        mock_writer.write.return_value = ("xyz", out_path)
+        mock_writer.resume_command.return_value = "codex resume xyz"
 
         result = runner.invoke(main, ["convert", "abc12345"])
 
     assert result.exit_code == 0
     assert str(out_path) in result.output
-    assert "claude --resume sess-id" in result.output
     mock_writer.write.assert_called_once()
 
 
@@ -222,7 +222,7 @@ def test_convert_unknown_id_prints_error_and_exits(tmp_path: Path) -> None:
 
 def test_convert_prints_resume_command(tmp_path: Path) -> None:
     runner = CliRunner()
-    entry = _entry()
+    entry = _entry(tool="codex")
     index = SessionIndex(sessions=[entry])
     messages = [MagicMock()]
 
