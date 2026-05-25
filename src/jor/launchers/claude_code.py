@@ -1,9 +1,8 @@
-"""Launcher: write Claude Code session file and run claude --resume."""
+"""Launcher: resume or create a Claude Code session."""
 
 from __future__ import annotations
 
 import subprocess
-import uuid
 from pathlib import Path
 
 from jor.session.schema import JorMessage
@@ -14,11 +13,15 @@ class ClaudeCodeLauncher:
     def __init__(self, claude_home: Path | None = None) -> None:
         self._home = claude_home or Path.home() / ".claude"
 
-    def launch(self, messages: list[JorMessage], session_id: str | None = None) -> None:
-        writer = ClaudeCodeWriter()
-        target_dir = self._home / "projects" / "jor-imported" / "sessions"
-        target_dir.mkdir(parents=True, exist_ok=True)
-        sid = session_id or str(uuid.uuid4())
-        _, out = writer.write(messages, target_dir / f"{sid}.jsonl")
-        cmd = writer.resume_command(out)
-        subprocess.run(cmd, shell=True)
+    def launch(self, messages: list[JorMessage], session_id: str | None = None, project: str | None = None) -> None:
+        if session_id:
+            cmd = f"claude --resume {session_id}"
+        else:
+            writer = ClaudeCodeWriter()
+            target_dir = self._home / "projects" / "jor-imported" / "sessions"
+            target_dir.mkdir(parents=True, exist_ok=True)
+            _, out = writer.write(messages, target_dir / "imported.jsonl")
+            cmd = writer.resume_command(out)
+
+        cwd = project if project and Path(project).is_dir() else None
+        subprocess.run(cmd, shell=True, cwd=cwd)

@@ -129,4 +129,4 @@ def open_session(session_id: str, codex: bool) -> None:
     if codex:
         CodexLauncher().launch(messages, session_id=entry.source_id, project=entry.project)
     else:
-        ClaudeCodeLauncher().launch(messages, entry.id)
+        ClaudeCodeLauncher().launch(messages, session_id=entry.source_id, project=entry.project)
