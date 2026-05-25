@@ -1,4 +1,4 @@
-"""Codex session connector — reads ~/.codex/sessions/rollout-*.jsonl."""
+"""Codex session connector — reads ~/.codex/sessions/**/rollout-*.jsonl."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ class CodexConnector:
 
     def scan(self, jor_home: Path) -> list[IndexEntry]:
         entries: list[IndexEntry] = []
-        for session_path in self._home.glob("sessions/rollout-*.jsonl"):
+        for session_path in self._home.glob("sessions/**/rollout-*.jsonl"):
             entry = self._process(session_path, jor_home)
             if entry is not None:
                 entries.append(entry)
@@ -38,66 +38,75 @@ class CodexConnector:
             try:
                 records.append(json.loads(line))
             except json.JSONDecodeError:
-                return None
+                continue  # skip malformed lines instead of aborting
 
         messages: list[JorMessage] = []
         title = ""
         source_id = session_path.stem
+        started_at = ""
+        project = ""
 
         for rec in records:
-            role = rec.get("role", "")
-            content = rec.get("content", "") or ""
+            rec_type = rec.get("type", "")
+            payload = rec.get("payload", {})
 
-            if role == "system":
-                messages.append(JorMessage(
-                    id=str(uuid.uuid4()),
-                    role="system",
-                    content=content,
-                    source_tool="codex",
-                    source_id=source_id,
-                ))
+            if rec_type == "session_meta":
+                started_at = payload.get("timestamp", "")
+                project = payload.get("cwd", "")
+                source_id = payload.get("id", source_id)
+                continue
 
-            elif role == "user":
-                if not title:
+            if rec_type != "response_item":
+                continue
+
+            payload_type = payload.get("type", "")
+
+            if payload_type == "message":
+                role = payload.get("role", "")
+                content = _extract_text(payload.get("content", ""))
+
+                if role == "developer":
+                    role = "system"
+
+                if role == "user" and not title and content:
                     title = content[:80]
-                messages.append(JorMessage(
-                    id=str(uuid.uuid4()),
-                    role="user",
-                    content=content,
-                    source_tool="codex",
-                    source_id=source_id,
-                ))
 
-            elif role == "assistant":
-                raw_tool_calls = rec.get("tool_calls") or []
-                tool_calls = [
-                    ToolCall(
-                        id=tc["id"],
-                        name=tc["function"]["name"],
-                        input=json.loads(tc["function"]["arguments"]) if isinstance(tc["function"]["arguments"], str) else tc["function"]["arguments"],
-                    )
-                    for tc in raw_tool_calls
-                ] or None
+                if role in ("system", "user", "assistant"):
+                    messages.append(JorMessage(
+                        id=str(uuid.uuid4()),
+                        role=role,
+                        content=content,
+                        source_tool="codex",
+                        source_id=source_id,
+                    ))
+
+            elif payload_type == "function_call":
+                call_id = payload.get("call_id", "")
+                name = payload.get("name", "")
+                raw_args = payload.get("arguments", "{}")
+                try:
+                    args = json.loads(raw_args) if isinstance(raw_args, str) else raw_args
+                except json.JSONDecodeError:
+                    args = {"raw": raw_args}
+
+                tc = ToolCall(id=call_id, name=name, input=args)
                 messages.append(JorMessage(
                     id=str(uuid.uuid4()),
                     role="assistant",
-                    content=content,
-                    tool_calls=tool_calls,
+                    content="",
+                    tool_calls=[tc],
                     source_tool="codex",
                     source_id=source_id,
                 ))
 
-            elif role == "tool":
-                tool_call_id = rec.get("tool_call_id", "")
-                result_content = content
+            elif payload_type == "function_call_output":
+                call_id = payload.get("call_id", "")
+                output = _extract_text(payload.get("output", ""))
                 messages.append(JorMessage(
                     id=str(uuid.uuid4()),
                     role="tool_result",
-                    content=result_content,
-                    tool_result=ToolResult(
-                        tool_call_id=tool_call_id,
-                        content=result_content,
-                    ),
+                    content=output,
+                    tool_result=ToolResult(tool_call_id=call_id, content=output),
                     source_tool="codex",
                     source_id=source_id,
                 ))
@@ -111,16 +120,32 @@ class CodexConnector:
             "\n".join(m.model_dump_json() for m in messages) + "\n"
         )
 
-        # First user message timestamp not available in codex format — leave empty
-        started_at = ""
-
         return IndexEntry(
             id=entry_id,
             tool="codex",
             source_id=source_id,
             source_path=str(session_path),
             title=title or session_path.stem,
-            project="",
+            project=project,
             started_at=started_at,
             message_count=len(messages),
         )
+
+
+def _extract_text(content: str | list | None) -> str:
+    """Extract text from Codex content which can be a string or list of content blocks."""
+    if content is None:
+        return ""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, dict):
+                text = block.get("text", "")
+                if not text:
+                    text = block.get("output", "")
+                if text:
+                    parts.append(text)
+        return "\n".join(parts)
+    return ""
