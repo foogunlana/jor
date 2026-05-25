@@ -4,8 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from jor.discovery.index import IndexEntry
-from jor.session.schema import JorMessage
+from jor.core.index import IndexEntry
+from jor.core.schema import JorMessage
 
 
 def read_session(path: Path) -> list[JorMessage]:

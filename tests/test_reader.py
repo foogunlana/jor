@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from jor.discovery.index import IndexEntry
-from jor.session.reader import format_full, format_summary, read_session
-from jor.session.schema import JorMessage, ToolCall
+from jor.core.index import IndexEntry
+from jor.core.reader import format_full, format_summary, read_session
+from jor.core.schema import JorMessage, ToolCall
 
 
 def make_message(i: int, role: str = "user", content: str = "", files: list[str] | None = None) -> JorMessage:

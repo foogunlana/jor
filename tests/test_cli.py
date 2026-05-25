@@ -10,7 +10,7 @@ import pytest
 from click.testing import CliRunner
 
 from jor.cli import main
-from jor.discovery.index import IndexEntry, SessionIndex
+from jor.core.index import IndexEntry, SessionIndex
 
 
 # ---------------------------------------------------------------------------

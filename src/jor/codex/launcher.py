@@ -5,8 +5,8 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from jor.session.schema import JorMessage
-from jor.session.writers.codex import CodexWriter
+from jor.core.schema import JorMessage
+from jor.codex.writer import CodexWriter
 
 
 class CodexLauncher:

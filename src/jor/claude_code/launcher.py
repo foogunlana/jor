@@ -6,8 +6,8 @@ import subprocess
 import uuid
 from pathlib import Path
 
-from jor.session.schema import JorMessage
-from jor.session.writers.claude_code import ClaudeCodeWriter
+from jor.core.schema import JorMessage
+from jor.claude_code.writer import ClaudeCodeWriter
 
 
 class ClaudeCodeLauncher:

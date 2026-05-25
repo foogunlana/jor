@@ -4,9 +4,15 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Protocol
 
-from jor.discovery.connectors.base import Connector
-from jor.discovery.index import load_index, save_index, upsert_session
+from jor.core.index import IndexEntry, load_index, save_index, upsert_session
+
+
+class Connector(Protocol):
+    def name(self) -> str: ...
+    def detect(self) -> bool: ...
+    def scan(self, jor_home: Path) -> list[IndexEntry]: ...
 
 
 class Scanner:

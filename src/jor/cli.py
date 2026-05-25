@@ -6,15 +6,15 @@ from pathlib import Path
 
 import click
 
-from jor.discovery.connectors.claude_code import ClaudeCodeConnector
-from jor.discovery.connectors.codex import CodexConnector
-from jor.discovery.index import load_index
-from jor.discovery.scanner import Scanner
-from jor.launchers.claude_code import ClaudeCodeLauncher
-from jor.launchers.codex import CodexLauncher
-from jor.session.reader import read_session
-from jor.session.writers.claude_code import ClaudeCodeWriter
-from jor.session.writers.codex import CodexWriter
+from jor.claude_code.connector import ClaudeCodeConnector
+from jor.claude_code.launcher import ClaudeCodeLauncher
+from jor.claude_code.writer import ClaudeCodeWriter
+from jor.codex.connector import CodexConnector
+from jor.codex.launcher import CodexLauncher
+from jor.codex.writer import CodexWriter
+from jor.core.index import load_index
+from jor.core.reader import read_session
+from jor.core.scanner import Scanner
 
 JOR_HOME = Path.home() / ".jor"
 

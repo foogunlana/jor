@@ -1,9 +1,9 @@
-"""Writer protocol — all target writers implement this interface."""
+"""Protocol definitions for writers."""
 
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
-from jor.session.schema import JorMessage
+from jor.core.schema import JorMessage
 
 
 @runtime_checkable

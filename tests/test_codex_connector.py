@@ -5,8 +5,8 @@ from pathlib import Path
 
 import pytest
 
-from jor.discovery.connectors.codex import CodexConnector
-from jor.session.schema import JorMessage
+from jor.codex.connector import CodexConnector
+from jor.core.schema import JorMessage
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "codex_session.jsonl"

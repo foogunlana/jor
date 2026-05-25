@@ -5,9 +5,9 @@ from pathlib import Path
 
 import pytest
 
-from jor.session.schema import JorMessage, ToolCall, ToolResult
-from jor.session.writers.claude_code import ClaudeCodeWriter
-from jor.session.writers.codex import CodexWriter
+from jor.core.schema import JorMessage, ToolCall, ToolResult
+from jor.claude_code.writer import ClaudeCodeWriter
+from jor.codex.writer import CodexWriter
 
 
 @pytest.fixture()

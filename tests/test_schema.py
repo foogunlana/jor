@@ -6,7 +6,7 @@ import pytest
 
 
 def test_tool_call_model_has_required_fields() -> None:
-    from jor.session.schema import ToolCall
+    from jor.core.schema import ToolCall
 
     tc = ToolCall(id="tc1", name="read_file", input={"path": "/foo"})
     assert tc.id == "tc1"
@@ -15,7 +15,7 @@ def test_tool_call_model_has_required_fields() -> None:
 
 
 def test_tool_result_model_has_required_fields() -> None:
-    from jor.session.schema import ToolResult
+    from jor.core.schema import ToolResult
 
     tr = ToolResult(tool_call_id="tc1", content="file contents")
     assert tr.tool_call_id == "tc1"
@@ -24,14 +24,14 @@ def test_tool_result_model_has_required_fields() -> None:
 
 
 def test_tool_result_is_error_optional() -> None:
-    from jor.session.schema import ToolResult
+    from jor.core.schema import ToolResult
 
     tr = ToolResult(tool_call_id="tc1", content="oops", is_error=True)
     assert tr.is_error is True
 
 
 def test_jor_message_basic_fields() -> None:
-    from jor.session.schema import JorMessage
+    from jor.core.schema import JorMessage
 
     msg = JorMessage(id="m1", role="user", content="hello")
     assert msg.id == "m1"
@@ -40,7 +40,7 @@ def test_jor_message_basic_fields() -> None:
 
 
 def test_jor_message_all_roles_valid() -> None:
-    from jor.session.schema import JorMessage
+    from jor.core.schema import JorMessage
 
     for role in ("user", "assistant", "system", "tool_result"):
         msg = JorMessage(id="m1", role=role, content="x")
@@ -48,7 +48,7 @@ def test_jor_message_all_roles_valid() -> None:
 
 
 def test_jor_message_invalid_role_rejected() -> None:
-    from jor.session.schema import JorMessage
+    from jor.core.schema import JorMessage
     from pydantic import ValidationError
 
     with pytest.raises(ValidationError):
@@ -56,7 +56,7 @@ def test_jor_message_invalid_role_rejected() -> None:
 
 
 def test_jor_message_optional_fields_default_none() -> None:
-    from jor.session.schema import JorMessage
+    from jor.core.schema import JorMessage
 
     msg = JorMessage(id="m1", role="user", content="hi")
     assert msg.tool_calls is None
@@ -71,7 +71,7 @@ def test_jor_message_optional_fields_default_none() -> None:
 
 
 def test_jor_message_serialize_to_json_line() -> None:
-    from jor.session.schema import JorMessage
+    from jor.core.schema import JorMessage
 
     msg = JorMessage(id="m1", role="assistant", content="hi")
     line = msg.model_dump_json()
@@ -82,7 +82,7 @@ def test_jor_message_serialize_to_json_line() -> None:
 
 
 def test_jor_message_round_trip() -> None:
-    from jor.session.schema import JorMessage, ToolCall
+    from jor.core.schema import JorMessage, ToolCall
 
     tc = ToolCall(id="tc1", name="bash", input={"cmd": "ls"})
     msg = JorMessage(

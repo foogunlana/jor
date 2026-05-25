@@ -6,8 +6,8 @@ import json
 import uuid
 from pathlib import Path
 
-from jor.discovery.index import IndexEntry
-from jor.session.schema import JorMessage, ToolCall, ToolResult
+from jor.core.index import IndexEntry
+from jor.core.schema import JorMessage, ToolCall, ToolResult
 
 
 class CodexConnector:

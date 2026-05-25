@@ -26,60 +26,60 @@ def jor_home(tmp_path: Path) -> Path:
 
 
 def test_connector_name():
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
+    from jor.claude_code.connector import ClaudeCodeConnector
     c = ClaudeCodeConnector(claude_home=Path("/nonexistent"))
     assert c.name() == "claude_code"
 
 
 def test_detect_true(claude_home: Path):
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
+    from jor.claude_code.connector import ClaudeCodeConnector
     c = ClaudeCodeConnector(claude_home=claude_home)
     assert c.detect() is True
 
 
 def test_detect_false(tmp_path: Path):
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
+    from jor.claude_code.connector import ClaudeCodeConnector
     c = ClaudeCodeConnector(claude_home=tmp_path / ".claude")
     assert c.detect() is False
 
 
 def test_scan_returns_one_entry(claude_home: Path, jor_home: Path):
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
+    from jor.claude_code.connector import ClaudeCodeConnector
     c = ClaudeCodeConnector(claude_home=claude_home)
     entries = c.scan(jor_home)
     assert len(entries) == 1
 
 
 def test_scan_entry_source_tool(claude_home: Path, jor_home: Path):
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
+    from jor.claude_code.connector import ClaudeCodeConnector
     c = ClaudeCodeConnector(claude_home=claude_home)
     entry = c.scan(jor_home)[0]
     assert entry.tool == "claude_code"
 
 
 def test_scan_entry_source_id(claude_home: Path, jor_home: Path):
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
+    from jor.claude_code.connector import ClaudeCodeConnector
     c = ClaudeCodeConnector(claude_home=claude_home)
     entry = c.scan(jor_home)[0]
     assert entry.source_id == "abc-123-session"
 
 
 def test_scan_entry_title_from_first_user_message(claude_home: Path, jor_home: Path):
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
+    from jor.claude_code.connector import ClaudeCodeConnector
     c = ClaudeCodeConnector(claude_home=claude_home)
     entry = c.scan(jor_home)[0]
     assert entry.title == "Refactor the auth module to use JWT tokens"
 
 
 def test_scan_entry_project_path(claude_home: Path, jor_home: Path):
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
+    from jor.claude_code.connector import ClaudeCodeConnector
     c = ClaudeCodeConnector(claude_home=claude_home)
     entry = c.scan(jor_home)[0]
     assert entry.project == "/Users/foo/code/my-app"
 
 
 def test_scan_writes_jor_session_file(claude_home: Path, jor_home: Path):
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
+    from jor.claude_code.connector import ClaudeCodeConnector
     c = ClaudeCodeConnector(claude_home=claude_home)
     entry = c.scan(jor_home)[0]
     session_file = jor_home / "sessions" / f"{entry.id}.jsonl"
@@ -87,8 +87,8 @@ def test_scan_writes_jor_session_file(claude_home: Path, jor_home: Path):
 
 
 def test_scan_jor_session_has_messages(claude_home: Path, jor_home: Path):
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
-    from jor.session.schema import JorMessage
+    from jor.claude_code.connector import ClaudeCodeConnector
+    from jor.core.schema import JorMessage
     c = ClaudeCodeConnector(claude_home=claude_home)
     entry = c.scan(jor_home)[0]
     session_file = jor_home / "sessions" / f"{entry.id}.jsonl"
@@ -97,8 +97,8 @@ def test_scan_jor_session_has_messages(claude_home: Path, jor_home: Path):
 
 
 def test_scan_maps_user_role(claude_home: Path, jor_home: Path):
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
-    from jor.session.schema import JorMessage
+    from jor.claude_code.connector import ClaudeCodeConnector
+    from jor.core.schema import JorMessage
     c = ClaudeCodeConnector(claude_home=claude_home)
     entry = c.scan(jor_home)[0]
     session_file = jor_home / "sessions" / f"{entry.id}.jsonl"
@@ -108,8 +108,8 @@ def test_scan_maps_user_role(claude_home: Path, jor_home: Path):
 
 
 def test_scan_maps_assistant_with_tool_calls(claude_home: Path, jor_home: Path):
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
-    from jor.session.schema import JorMessage
+    from jor.claude_code.connector import ClaudeCodeConnector
+    from jor.core.schema import JorMessage
     c = ClaudeCodeConnector(claude_home=claude_home)
     entry = c.scan(jor_home)[0]
     session_file = jor_home / "sessions" / f"{entry.id}.jsonl"
@@ -120,8 +120,8 @@ def test_scan_maps_assistant_with_tool_calls(claude_home: Path, jor_home: Path):
 
 
 def test_scan_maps_tool_result(claude_home: Path, jor_home: Path):
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
-    from jor.session.schema import JorMessage
+    from jor.claude_code.connector import ClaudeCodeConnector
+    from jor.core.schema import JorMessage
     c = ClaudeCodeConnector(claude_home=claude_home)
     entry = c.scan(jor_home)[0]
     session_file = jor_home / "sessions" / f"{entry.id}.jsonl"
@@ -133,8 +133,8 @@ def test_scan_maps_tool_result(claude_home: Path, jor_home: Path):
 
 
 def test_scan_stores_git_branch_in_metadata(claude_home: Path, jor_home: Path):
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
-    from jor.session.schema import JorMessage
+    from jor.claude_code.connector import ClaudeCodeConnector
+    from jor.core.schema import JorMessage
     c = ClaudeCodeConnector(claude_home=claude_home)
     entry = c.scan(jor_home)[0]
     session_file = jor_home / "sessions" / f"{entry.id}.jsonl"
@@ -146,7 +146,7 @@ def test_scan_stores_git_branch_in_metadata(claude_home: Path, jor_home: Path):
 
 def test_scan_title_truncated_to_80_chars(tmp_path: Path, jor_home: Path):
     """Title is truncated to 80 chars if first user message is long."""
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
+    from jor.claude_code.connector import ClaudeCodeConnector
     long_msg = "A" * 100
     session_dir = tmp_path / ".claude" / "projects" / "proj"
     session_dir.mkdir(parents=True)
@@ -160,7 +160,7 @@ def test_scan_title_truncated_to_80_chars(tmp_path: Path, jor_home: Path):
 
 def test_scan_handles_empty_file(tmp_path: Path, jor_home: Path):
     """Empty session file is skipped without crashing."""
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
+    from jor.claude_code.connector import ClaudeCodeConnector
     session_dir = tmp_path / ".claude" / "projects" / "proj"
     session_dir.mkdir(parents=True)
     (session_dir / "empty.jsonl").write_text("")
@@ -171,7 +171,7 @@ def test_scan_handles_empty_file(tmp_path: Path, jor_home: Path):
 
 def test_scan_handles_malformed_file(tmp_path: Path, jor_home: Path):
     """Malformed JSONL is skipped without crashing."""
-    from jor.discovery.connectors.claude_code import ClaudeCodeConnector
+    from jor.claude_code.connector import ClaudeCodeConnector
     session_dir = tmp_path / ".claude" / "projects" / "proj"
     session_dir.mkdir(parents=True)
     (session_dir / "bad.jsonl").write_text("not json at all\n{also bad}\n")

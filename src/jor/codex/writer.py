@@ -6,7 +6,7 @@ import json
 import uuid
 from pathlib import Path
 
-from jor.session.schema import JorMessage
+from jor.core.schema import JorMessage
 
 
 class CodexWriter:

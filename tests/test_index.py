@@ -7,7 +7,7 @@ import pytest
 
 
 def make_entry(**kwargs):
-    from jor.discovery.index import IndexEntry
+    from jor.core.index import IndexEntry
 
     defaults = {
         "id": "jor-abc123",
@@ -42,7 +42,7 @@ def test_index_entry_required_fields():
 
 
 def test_index_entry_optional_fields_default_none():
-    from jor.discovery.index import IndexEntry
+    from jor.core.index import IndexEntry
 
     entry = IndexEntry(
         id="jor-x",
@@ -61,7 +61,7 @@ def test_index_entry_optional_fields_default_none():
 
 
 def test_session_index_model():
-    from jor.discovery.index import SessionIndex
+    from jor.core.index import SessionIndex
 
     idx = SessionIndex()
     assert idx.version == 1
@@ -70,7 +70,7 @@ def test_session_index_model():
 
 
 def test_session_index_with_sessions():
-    from jor.discovery.index import SessionIndex
+    from jor.core.index import SessionIndex
 
     entry = make_entry()
     idx = SessionIndex(sessions=[entry], last_scan="2026-04-25T10:00:00Z")
@@ -79,7 +79,7 @@ def test_session_index_with_sessions():
 
 
 def test_load_index_missing_file(tmp_path):
-    from jor.discovery.index import load_index
+    from jor.core.index import load_index
 
     idx = load_index(tmp_path / "index.json")
     assert idx.version == 1
@@ -87,7 +87,7 @@ def test_load_index_missing_file(tmp_path):
 
 
 def test_save_and_load_index(tmp_path):
-    from jor.discovery.index import IndexEntry, SessionIndex, load_index, save_index
+    from jor.core.index import IndexEntry, SessionIndex, load_index, save_index
 
     entry = make_entry()
     idx = SessionIndex(sessions=[entry], last_scan="2026-04-25T10:00:00Z")
@@ -104,7 +104,7 @@ def test_save_and_load_index(tmp_path):
 
 
 def test_save_index_creates_valid_json(tmp_path):
-    from jor.discovery.index import SessionIndex, save_index
+    from jor.core.index import SessionIndex, save_index
 
     idx = SessionIndex()
     path = tmp_path / "index.json"
@@ -116,7 +116,7 @@ def test_save_index_creates_valid_json(tmp_path):
 
 
 def test_upsert_session_adds_new_entry():
-    from jor.discovery.index import SessionIndex, upsert_session
+    from jor.core.index import SessionIndex, upsert_session
 
     idx = SessionIndex()
     entry = make_entry()
@@ -126,7 +126,7 @@ def test_upsert_session_adds_new_entry():
 
 
 def test_upsert_session_updates_existing():
-    from jor.discovery.index import SessionIndex, upsert_session
+    from jor.core.index import SessionIndex, upsert_session
 
     idx = SessionIndex()
     entry = make_entry(title="Original title")
@@ -140,7 +140,7 @@ def test_upsert_session_updates_existing():
 
 
 def test_upsert_session_multiple_entries():
-    from jor.discovery.index import SessionIndex, upsert_session
+    from jor.core.index import SessionIndex, upsert_session
 
     idx = SessionIndex()
     upsert_session(idx, make_entry(id="jor-1"))
@@ -151,7 +151,7 @@ def test_upsert_session_multiple_entries():
 
 
 def test_round_trip_preserves_all_fields(tmp_path):
-    from jor.discovery.index import SessionIndex, load_index, save_index
+    from jor.core.index import SessionIndex, load_index, save_index
 
     entry = make_entry()
     idx = SessionIndex(sessions=[entry], last_scan="2026-04-25T10:00:00Z")

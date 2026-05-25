@@ -5,8 +5,8 @@ from unittest.mock import MagicMock
 
 import pytest
 
-from jor.discovery.index import IndexEntry, load_index
-from jor.discovery.scanner import Scanner
+from jor.core.index import IndexEntry, load_index
+from jor.core.scanner import Scanner
 
 
 def _make_entry(tool: str, n: int) -> IndexEntry:
