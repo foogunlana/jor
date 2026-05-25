@@ -126,7 +126,11 @@ def open_session(session_id: str, codex: bool) -> None:
     session_file = jor_home / "sessions" / f"{entry.id}.jsonl"
     messages = read_session(session_file)
 
+    target = "codex" if codex else "claude_code"
+    same_tool = entry.tool == target
+    source_id = entry.source_id if same_tool else None
+
     if codex:
-        CodexLauncher().launch(messages, session_id=entry.source_id, project=entry.project)
+        CodexLauncher().launch(messages, session_id=source_id, project=entry.project)
     else:
-        ClaudeCodeLauncher().launch(messages, session_id=entry.source_id, project=entry.project)
+        ClaudeCodeLauncher().launch(messages, session_id=source_id, project=entry.project)
