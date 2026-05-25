@@ -83,6 +83,17 @@ Each layer's test bead depends on the previous layer's implementation bead. This
 - Each layer has passing tests before the next begins
 - A broken layer blocks downstream work (good — catches issues early)
 
+## Test Fixtures for External Formats
+
+When a test bead involves parsing or writing an external format (session files, config files, API responses):
+
+1. **Read a real file first** — never invent a fixture from docs or assumptions
+2. **Copy a real record** into `tests/fixtures/` and trim it down to the minimum needed
+3. **Verify directory structure** — check where real files live before hardcoding paths in globs
+4. **Note the source** — add a comment in the fixture or test noting which real file it was derived from
+
+Invented fixtures are the #1 cause of connectors that pass all tests but fail on real data.
+
 ## Scaffolding & Non-TDD Beads
 
 Not everything needs a TDD pair. Use a single bead for:

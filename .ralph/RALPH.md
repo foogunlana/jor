@@ -62,7 +62,22 @@ Pick the next bead from `bd ready` that is NOT claimed (in_progress) by another 
 - What should the user see/experience when this bead is done?
 - What's the minimal implementation?
 
-### 2. Write a Failing Test
+### 2. Ground Truth Check (for parsers/connectors/integrations)
+
+If the bead involves reading, writing, or integrating with an external format or tool:
+
+1. **Read a real file first.** Before writing any test fixture, inspect actual data:
+   ```bash
+   head -5 ~/.codex/sessions/**/*.jsonl   # real codex session
+   head -5 ~/.claude/projects/*/*.jsonl   # real claude code session
+   ```
+2. **Base your test fixture on real data.** Copy-paste and trim a real record — never invent a format from documentation alone.
+3. **Check the real directory structure.** Run `find` or `ls` to confirm paths, nesting, and naming before hardcoding globs.
+4. **Check the target tool's CLI.** Run `<tool> --help` or `<tool> <subcommand> --help` to verify flags and syntax.
+
+**Why:** Invented fixtures pass unit tests but break against reality. Every integration bug in jor's history came from skipping this step.
+
+### 3. Write a Failing Test
 - Add a test file in `tests/` (e.g. `tests/test_feature.py`)
 - Write a test that captures the acceptance criteria
 - Run `pytest` and confirm the new test fails
@@ -112,6 +127,21 @@ Before closing, answer these questions:
 - [ ] Did I actually see/test the feature working? (not just code compiling)
 - [ ] Does the change match what the bead requested?
 - [ ] Would a user/reviewer agree this is complete?
+
+### Smoke Test (MANDATORY for CLI/integration work)
+
+After unit tests pass, run the **actual user-facing command** against real data:
+
+```bash
+# Examples — pick whatever matches the bead:
+jor discover          # did it find sessions?
+jor list --codex      # do entries look right?
+jor open <id>         # does it actually launch?
+```
+
+If the bead adds or changes a CLI command, connector, writer, or launcher, you MUST run it for real — not just unit tests. Mocked tests hide integration bugs.
+
+**If the smoke test fails:** Fix it before closing. Do NOT leave it for the next engineer.
 
 **If verification fails:** Iterate on the fix. Do NOT close a broken bead.
 
