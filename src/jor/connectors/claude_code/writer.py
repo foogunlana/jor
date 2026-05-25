@@ -7,28 +7,25 @@ identifies sessions by filename (the UUID stem).
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 
+from jor.connectors.base import BaseWriter
 from jor.core.schema import JorMessage
 
 
-class ClaudeCodeWriter:
+class ClaudeCodeWriter(BaseWriter):
     """Write jor messages as Claude Code JSONL."""
 
     def write(self, messages: list[JorMessage], target_path: Path) -> tuple[str, Path]:
         """Write messages to target_path (full file path). Returns (session_id, path)."""
-        target_path.parent.mkdir(parents=True, exist_ok=True)
         session_id = target_path.stem
-        records = [self._to_record(msg, session_id) for msg in messages]
-        target_path.write_text("\n".join(json.dumps(r) for r in records) + "\n")
+        self.write_jsonl(messages, target_path, session_id)
         return session_id, target_path
 
     def resume_command(self, session_file: Path) -> str:
-        session_id = session_file.stem
-        return f"claude --resume {session_id}"
+        return f"claude --resume {session_file.stem}"
 
-    def _to_record(self, msg: JorMessage, session_id: str) -> dict:
+    def to_record(self, msg: JorMessage, session_id: str) -> dict:
         base = {
             "sessionId": session_id,
             "timestamp": msg.timestamp or "",

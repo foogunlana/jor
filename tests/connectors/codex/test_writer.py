@@ -10,11 +10,11 @@ import pytest
 from jor.core.schema import JorMessage, ToolCall, ToolResult
 
 
-def test_codex_writer_implements_writer_protocol() -> None:
+def test_codex_writer_extends_base_writer() -> None:
+    from jor.connectors.base import BaseWriter
     from jor.connectors.codex.writer import CodexWriter
-    from jor.core.protocols import Writer
 
-    assert isinstance(CodexWriter(), Writer)
+    assert isinstance(CodexWriter(), BaseWriter)
 
 
 def test_codex_writer_write_returns_session_id_and_path(tmp_path: Path) -> None:

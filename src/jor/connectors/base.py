@@ -1,20 +1,33 @@
-"""Base connector with shared JSONL scanning boilerplate.
+"""Base classes for connectors, writers, and launchers.
 
-All tool connectors inherit from BaseConnector. Each subclass only provides:
+All tool connectors inherit from BaseConnector. Each subclass provides:
 - Class attributes: TOOL_NAME, GLOB_PATTERN, DETECT_PATH, DEFAULT_HOME, STRICT_JSON
 - parse_record(record, source_id) -> JorMessage | list[JorMessage] | None
 - extract_metadata(records, session_path) -> dict with keys: title, project, started_at, source_id
+
+Writers inherit from BaseWriter. Each subclass provides:
+- to_record(msg) -> dict — convert one JorMessage to the native format
+
+Launchers inherit from BaseLauncher. Each subclass provides:
+- RESUME_CMD — format string for the resume command (e.g. "claude --resume {session_id}")
+- _write_session(messages, project) -> tuple[str, Path] — write session file and return (session_id, path)
 """
 
 from __future__ import annotations
 
 import json
+import subprocess
 import uuid
 from abc import ABC, abstractmethod
 from pathlib import Path
 
 from jor.core.index import IndexEntry
 from jor.core.schema import JorMessage
+
+
+# ---------------------------------------------------------------------------
+# Connector
+# ---------------------------------------------------------------------------
 
 
 class BaseConnector(ABC):
@@ -113,3 +126,62 @@ class BaseConnector(ABC):
             started_at=started_at,
             message_count=len(messages),
         )
+
+
+# ---------------------------------------------------------------------------
+# Writer
+# ---------------------------------------------------------------------------
+
+
+class BaseWriter(ABC):
+    """Shared JSONL writing boilerplate for session writers."""
+
+    @abstractmethod
+    def to_record(self, msg: JorMessage, session_id: str) -> dict | list[dict]:
+        """Convert one JorMessage to native record(s)."""
+        ...
+
+    @abstractmethod
+    def resume_command(self, session_file: Path) -> str:
+        """Shell command to resume this session in the target tool."""
+        ...
+
+    def write_jsonl(self, messages: list[JorMessage], path: Path, session_id: str) -> None:
+        """Serialize messages to a JSONL file."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        records: list[dict] = []
+        for msg in messages:
+            result = self.to_record(msg, session_id)
+            if isinstance(result, list):
+                records.extend(result)
+            else:
+                records.append(result)
+        path.write_text("\n".join(json.dumps(r) for r in records) + "\n")
+
+
+# ---------------------------------------------------------------------------
+# Launcher
+# ---------------------------------------------------------------------------
+
+
+class BaseLauncher(ABC):
+    """Shared launch boilerplate: resume existing or write + launch new."""
+
+    RESUME_CMD: str  # e.g. "claude --resume {session_id}"
+
+    def __init__(self, home_path: Path) -> None:
+        self._home = home_path
+
+    @abstractmethod
+    def _write_session(self, messages: list[JorMessage], project: str | None) -> tuple[str, str, Path]:
+        """Write a new session file. Returns (session_id, resume_command, path)."""
+        ...
+
+    def launch(self, messages: list[JorMessage], session_id: str | None = None, project: str | None = None) -> None:
+        if session_id:
+            cmd = self.RESUME_CMD.format(session_id=session_id)
+        else:
+            _, cmd, _ = self._write_session(messages, project)
+
+        cwd = project if project and Path(project).is_dir() else None
+        subprocess.run(cmd, shell=True, cwd=cwd)

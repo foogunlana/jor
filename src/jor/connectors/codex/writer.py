@@ -11,10 +11,11 @@ import json
 import uuid
 from pathlib import Path
 
+from jor.connectors.base import BaseWriter
 from jor.core.schema import JorMessage
 
 
-class CodexWriter:
+class CodexWriter(BaseWriter):
     """Write jor messages as Codex JSONL."""
 
     def write(self, messages: list[JorMessage], target_dir: Path) -> tuple[str, Path]:
@@ -22,8 +23,7 @@ class CodexWriter:
         target_dir.mkdir(parents=True, exist_ok=True)
         session_id = str(uuid.uuid4())
         out = target_dir / f"rollout-{session_id}.jsonl"
-        records = [self._to_record(msg) for msg in messages]
-        out.write_text("\n".join(json.dumps(r) for r in records) + "\n")
+        self.write_jsonl(messages, out, session_id)
         return session_id, out
 
     def resume_command(self, session_file: Path) -> str:
@@ -31,7 +31,7 @@ class CodexWriter:
         session_id = stem[len("rollout-"):] if stem.startswith("rollout-") else stem
         return f"codex resume {session_id}"
 
-    def _to_record(self, msg: JorMessage) -> dict:
+    def to_record(self, msg: JorMessage, session_id: str) -> dict:
         if msg.role == "tool_result":
             return {
                 "role": "tool",

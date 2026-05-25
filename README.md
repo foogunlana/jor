@@ -43,14 +43,14 @@ Sessions are portable — file paths are stored relative, and source provenance 
 
 ## Adding a Connector
 
-Each connector lives in `src/jor/connectors/<tool_name>/` and has 3 files:
+Each connector lives in `src/jor/connectors/<tool_name>/` and has 4 files:
 
 ```
 src/jor/connectors/my_tool/
 ├── schema.json      # describes what one JSONL line looks like
-├── connector.py     # subclass of BaseConnector with parse + metadata methods
-├── writer.py        # (optional) converts jor format back to native
-└── launcher.py      # (optional) launches the tool with a resume command
+├── connector.py     # subclass of BaseConnector — reads native format
+├── writer.py        # subclass of BaseWriter — writes native format
+└── launcher.py      # subclass of BaseLauncher — launches the tool
 ```
 
 ### 1. schema.json

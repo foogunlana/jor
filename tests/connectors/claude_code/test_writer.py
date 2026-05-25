@@ -15,17 +15,11 @@ from jor.core.schema import JorMessage, ToolCall, ToolResult
 # ---------------------------------------------------------------------------
 
 
-def test_writer_protocol_has_write_method() -> None:
-    from jor.core.protocols import Writer
-
-    assert hasattr(Writer, "write")
-
-
-def test_claude_code_writer_implements_protocol() -> None:
-    from jor.core.protocols import Writer
+def test_claude_code_writer_extends_base_writer() -> None:
+    from jor.connectors.base import BaseWriter
     from jor.connectors.claude_code.writer import ClaudeCodeWriter
 
-    assert isinstance(ClaudeCodeWriter(), Writer)
+    assert isinstance(ClaudeCodeWriter(), BaseWriter)
 
 
 # ---------------------------------------------------------------------------

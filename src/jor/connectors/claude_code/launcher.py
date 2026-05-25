@@ -7,34 +7,29 @@ directory (~/.claude/projects/<project-name>/<uuid>.jsonl) then resumes it.
 
 from __future__ import annotations
 
-import subprocess
 import uuid
 from pathlib import Path
 
-from jor.core.schema import JorMessage
+from jor.connectors.base import BaseLauncher
 from jor.connectors.claude_code.writer import ClaudeCodeWriter
+from jor.core.schema import JorMessage
 
 
-class ClaudeCodeLauncher:
+class ClaudeCodeLauncher(BaseLauncher):
     """Write a session file and launch `claude --resume`."""
 
+    RESUME_CMD = "claude --resume {session_id}"
+
     def __init__(self, claude_home: Path | None = None) -> None:
-        self._home = claude_home or Path.home() / ".claude"
+        super().__init__(home_path=claude_home or Path.home() / ".claude")
 
-    def launch(self, messages: list[JorMessage], session_id: str | None = None, project: str | None = None) -> None:
-        if session_id:
-            cmd = f"claude --resume {session_id}"
-        else:
-            project_dir = _project_dir_name(project) if project else "jor-imported"
-            target_dir = self._home / "projects" / project_dir
-            target_dir.mkdir(parents=True, exist_ok=True)
-            sid = str(uuid.uuid4())
-            writer = ClaudeCodeWriter()
-            _, out = writer.write(messages, target_dir / f"{sid}.jsonl")
-            cmd = writer.resume_command(out)
-
-        cwd = project if project and Path(project).is_dir() else None
-        subprocess.run(cmd, shell=True, cwd=cwd)
+    def _write_session(self, messages: list[JorMessage], project: str | None) -> tuple[str, str, Path]:
+        project_dir = _project_dir_name(project) if project else "jor-imported"
+        target_dir = self._home / "projects" / project_dir
+        sid = str(uuid.uuid4())
+        writer = ClaudeCodeWriter()
+        _, out = writer.write(messages, target_dir / f"{sid}.jsonl")
+        return sid, writer.resume_command(out), out
 
 
 def _project_dir_name(project_path: str) -> str:
