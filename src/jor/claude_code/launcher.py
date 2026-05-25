@@ -1,4 +1,9 @@
-"""Launcher: resume or create a Claude Code session."""
+"""Launch a session in Claude Code.
+
+For same-tool resume: runs `claude --resume <session-id>` from the project dir.
+For cross-tool: writes a new session file to the correct Claude Code project
+directory (~/.claude/projects/<project-name>/<uuid>.jsonl) then resumes it.
+"""
 
 from __future__ import annotations
 
@@ -11,6 +16,8 @@ from jor.claude_code.writer import ClaudeCodeWriter
 
 
 class ClaudeCodeLauncher:
+    """Write a session file and launch `claude --resume`."""
+
     def __init__(self, claude_home: Path | None = None) -> None:
         self._home = claude_home or Path.home() / ".claude"
 

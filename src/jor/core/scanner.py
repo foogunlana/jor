@@ -1,4 +1,9 @@
-"""Scanner — orchestrates connectors, builds session index."""
+"""Scanner — runs all connectors and builds the session index.
+
+The scanner is the orchestrator for `jor discover`. It iterates over
+registered connectors (Claude Code, Codex, etc.), asks each to scan
+for sessions, and upserts the results into the shared index.
+"""
 
 from __future__ import annotations
 
@@ -10,12 +15,16 @@ from jor.core.index import IndexEntry, load_index, save_index, upsert_session
 
 
 class Connector(Protocol):
+    """Interface that every tool connector must implement."""
+
     def name(self) -> str: ...
     def detect(self) -> bool: ...
     def scan(self, jor_home: Path) -> list[IndexEntry]: ...
 
 
 class Scanner:
+    """Runs all detected connectors and updates the index."""
+
     def __init__(self, connectors: list[Connector], jor_home: Path) -> None:
         self._connectors = connectors
         self._jor_home = jor_home

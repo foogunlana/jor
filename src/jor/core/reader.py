@@ -1,4 +1,9 @@
-"""Session reader — load Jor sessions and format for output."""
+"""Read jor session files and format them for display.
+
+Session files are JSONL stored at ~/.jor/sessions/<id>.jsonl, one
+JorMessage per line. This module loads them and can produce either
+a human-readable summary or raw JSONL output.
+"""
 
 from __future__ import annotations
 

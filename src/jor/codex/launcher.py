@@ -1,4 +1,10 @@
-"""Launcher: resume or create a Codex session."""
+"""Launch a session in Codex.
+
+For same-tool resume: runs `codex resume <session-id>` from the project dir.
+For cross-tool: writes a new session file to ~/.codex/sessions/ then resumes.
+Note: cross-tool resume doesn't work yet because Codex tracks sessions in its
+own SQLite database, not by scanning files. See bead jor-4yo.
+"""
 
 from __future__ import annotations
 
@@ -10,6 +16,8 @@ from jor.codex.writer import CodexWriter
 
 
 class CodexLauncher:
+    """Write a session file and launch `codex resume`."""
+
     def __init__(self, codex_home: Path | None = None) -> None:
         self._home = codex_home or Path.home() / ".codex"
 

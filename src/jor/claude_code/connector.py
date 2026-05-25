@@ -1,4 +1,12 @@
-"""Claude Code session connector."""
+"""Discover and import Claude Code sessions into jor.
+
+Claude Code stores sessions as JSONL files at:
+    ~/.claude/projects/<project-name>/<session-uuid>.jsonl
+
+Each line is a JSON record with {sessionId, timestamp, type, message}.
+Record types: "user", "assistant", "tool_result". Assistant messages
+use Anthropic's content block format (text blocks + tool_use blocks).
+"""
 
 from __future__ import annotations
 
@@ -11,6 +19,8 @@ from jor.core.schema import JorMessage, ToolCall, ToolResult
 
 
 class ClaudeCodeConnector:
+    """Scan ~/.claude/projects/ for session files and convert to jor format."""
+
     def __init__(self, claude_home: Path | None = None) -> None:
         self._home = claude_home or Path.home() / ".claude"
 

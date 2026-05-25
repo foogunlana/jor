@@ -1,4 +1,9 @@
-"""Writer: Jor → Claude Code native JSONL format."""
+"""Convert jor sessions to Claude Code's native JSONL format.
+
+Output format: one JSON record per line with {sessionId, timestamp, type, message}.
+The session file is written to a specific path (not a directory) because Claude Code
+identifies sessions by filename (the UUID stem).
+"""
 
 from __future__ import annotations
 
@@ -9,6 +14,8 @@ from jor.core.schema import JorMessage
 
 
 class ClaudeCodeWriter:
+    """Write jor messages as Claude Code JSONL."""
+
     def write(self, messages: list[JorMessage], target_path: Path) -> tuple[str, Path]:
         """Write messages to target_path (full file path). Returns (session_id, path)."""
         target_path.parent.mkdir(parents=True, exist_ok=True)

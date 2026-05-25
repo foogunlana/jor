@@ -1,4 +1,14 @@
-"""Codex session connector — reads ~/.codex/sessions/**/rollout-*.jsonl."""
+"""Discover and import Codex sessions into jor.
+
+Codex stores sessions as JSONL files at:
+    ~/.codex/sessions/<year>/<month>/<day>/rollout-<timestamp>-<uuid>.jsonl
+
+Each line is a JSON record with {timestamp, type, payload}. Record types:
+"session_meta" (session info), "response_item" (messages, tool calls,
+tool results), "event_msg" (internal events like token counts), and
+"turn_context" (per-turn metadata). Only session_meta and response_item
+carry data we convert.
+"""
 
 from __future__ import annotations
 
@@ -11,6 +21,8 @@ from jor.core.schema import JorMessage, ToolCall, ToolResult
 
 
 class CodexConnector:
+    """Scan ~/.codex/sessions/ for session files and convert to jor format."""
+
     def __init__(self, codex_home: Path | None = None) -> None:
         self._home = codex_home or Path.home() / ".codex"
 

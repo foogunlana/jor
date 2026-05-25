@@ -1,4 +1,9 @@
-"""Writer: Jor → Codex native JSONL format (OpenAI chat completion)."""
+"""Convert jor sessions to Codex's native JSONL format.
+
+Output format: flat OpenAI chat completion records, one per line.
+Each record has {role, content} and optionally tool_calls or tool_call_id.
+The file is written to a directory with rollout-<uuid>.jsonl naming.
+"""
 
 from __future__ import annotations
 
@@ -10,6 +15,8 @@ from jor.core.schema import JorMessage
 
 
 class CodexWriter:
+    """Write jor messages as Codex JSONL."""
+
     def write(self, messages: list[JorMessage], target_dir: Path) -> tuple[str, Path]:
         """Write messages to target_dir. Returns (session_id, path)."""
         target_dir.mkdir(parents=True, exist_ok=True)
