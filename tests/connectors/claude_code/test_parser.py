@@ -1,4 +1,4 @@
-"""Unit tests for Claude Code parser functions."""
+"""Unit tests for Claude Code connector parsing methods."""
 
 from __future__ import annotations
 
@@ -6,8 +6,12 @@ from pathlib import Path
 
 import pytest
 
-from jor.connectors.claude_code.parser import extract_metadata, parse_record
+from jor.connectors.claude_code.connector import ClaudeCodeConnector
 from jor.core.schema import JorMessage
+
+_connector = ClaudeCodeConnector(claude_home=Path("/fake"))
+extract_metadata = _connector.extract_metadata
+parse_record = _connector.parse_record
 
 
 # ---------------------------------------------------------------------------

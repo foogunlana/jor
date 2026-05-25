@@ -43,74 +43,47 @@ Sessions are portable — file paths are stored relative, and source provenance 
 
 ## Adding a Connector
 
-Each connector lives in `src/jor/connectors/<tool_name>/` and has 4 files:
+Each connector lives in `src/jor/connectors/<tool_name>/` and has 3 files:
 
 ```
 src/jor/connectors/my_tool/
 ├── schema.json      # describes what one JSONL line looks like
-├── parser.py        # two functions: parse_record() + extract_metadata()
-├── connector.py     # thin subclass of BaseConnector (~15 lines)
+├── connector.py     # subclass of BaseConnector with parse + metadata methods
 ├── writer.py        # (optional) converts jor format back to native
 └── launcher.py      # (optional) launches the tool with a resume command
 ```
 
 ### 1. schema.json
 
-A JSON Schema that validates one line of the tool's session JSONL file. This is the format contract — it documents the native format and is validated against your test fixture automatically.
+A JSON Schema that validates one line of the tool's session JSONL file. This is the format contract — it documents the native format and catches format drift in tests. Be specific about the message structure, not just top-level fields.
 
 ```json
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "description": "One line of a MyTool session file",
   "type": "object",
-  "required": ["type", "content"],
+  "required": ["type", "message"],
   "properties": {
-    "type": { "type": "string" },
-    "content": { "type": "string" }
+    "type": { "type": "string", "enum": ["user", "assistant"] },
+    "message": {
+      "type": "object",
+      "required": ["role", "content"],
+      "properties": {
+        "role": { "type": "string" },
+        "content": { "type": "string" }
+      }
+    }
   }
 }
 ```
 
-### 2. parser.py
+### 2. connector.py
 
-Two standalone functions that handle the tool-specific parts:
-
-```python
-from jor.core.schema import JorMessage
-
-def extract_metadata(records: list[dict], session_path: Path) -> dict:
-    """Pull session-level info from the raw records.
-
-    Must return a dict with keys: title, project, started_at, source_id.
-    Any missing key gets a default. Title falls back to the first user message.
-    """
-    return {
-        "source_id": session_path.stem,
-        "started_at": records[0].get("timestamp", ""),
-        "project": records[0].get("cwd", ""),
-        "title": "",  # let BaseConnector use first user message
-    }
-
-def parse_record(record: dict, source_id: str) -> JorMessage | None:
-    """Convert one native JSONL record to a JorMessage. Return None to skip."""
-    if record.get("type") == "user":
-        return JorMessage(
-            id=str(uuid.uuid4()),
-            role="user",
-            content=record["content"],
-            source_tool="my_tool",
-            source_id=source_id,
-        )
-    return None
-```
-
-### 3. connector.py
-
-A thin subclass — just class attributes and delegation:
+Subclass `BaseConnector` and implement two methods — `extract_metadata()` and `parse_record()`. All JSONL scanning, file writing, and index creation is handled by the base class.
 
 ```python
 from jor.connectors.base import BaseConnector
-from jor.connectors.my_tool import parser
+from jor.core.schema import JorMessage
 
 class MyToolConnector(BaseConnector):
     TOOL_NAME = "my_tool"
@@ -122,11 +95,30 @@ class MyToolConnector(BaseConnector):
     def __init__(self, my_tool_home=None):
         super().__init__(home_path=my_tool_home)
 
-    def parse_record(self, record, source_id):
-        return parser.parse_record(record, source_id)
-
     def extract_metadata(self, records, session_path):
-        return parser.extract_metadata(records, session_path)
+        """Pull session-level info from the raw records.
+
+        Must return dict with keys: title, project, started_at, source_id.
+        Title falls back to the first user message if left empty.
+        """
+        return {
+            "source_id": session_path.stem,
+            "started_at": records[0].get("timestamp", ""),
+            "project": records[0].get("cwd", ""),
+            "title": "",
+        }
+
+    def parse_record(self, record, source_id):
+        """Convert one native JSONL record to a JorMessage. Return None to skip."""
+        if record.get("type") == "user":
+            return JorMessage(
+                id=str(uuid.uuid4()),
+                role="user",
+                content=record["message"]["content"],
+                source_tool="my_tool",
+                source_id=source_id,
+            )
+        return None
 ```
 
 ### 4. Testing

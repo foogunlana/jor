@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Codex JSONL Record",
-  "description": "Schema for a single line in a Codex session JSONL file.",
+  "description": "One line of a Codex session file. Each record has a timestamp, type, and payload. The payload structure varies by type.",
   "type": "object",
   "required": ["timestamp", "type"],
   "properties": {
@@ -13,7 +13,48 @@
       "enum": ["session_meta", "response_item", "event_msg", "turn_context"]
     },
     "payload": {
-      "type": "object"
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Payload subtype: 'message', 'function_call', 'function_call_output', 'reasoning' for response_item; varies for others"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["developer", "user", "assistant"],
+          "description": "Message role (only present when payload.type is 'message')"
+        },
+        "content": {
+          "description": "Message content — string or array of content blocks like {type: 'input_text', text: '...'}"
+        },
+        "name": {
+          "type": "string",
+          "description": "Function name (only for function_call)"
+        },
+        "arguments": {
+          "type": "string",
+          "description": "JSON-encoded function arguments (only for function_call)"
+        },
+        "call_id": {
+          "type": "string",
+          "description": "Tool call ID (for function_call and function_call_output)"
+        },
+        "output": {
+          "description": "Tool output — string or array of content blocks (only for function_call_output)"
+        },
+        "id": {
+          "type": "string",
+          "description": "Session UUID (only for session_meta)"
+        },
+        "cwd": {
+          "type": "string",
+          "description": "Working directory (only for session_meta)"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "Session start time (only for session_meta)"
+        }
+      }
     }
   }
 }

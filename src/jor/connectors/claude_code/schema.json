@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Claude Code JSONL Record",
-  "description": "Schema for a single line in a Claude Code session JSONL file.",
+  "description": "One line of a Claude Code session file. Each record has a type, sessionId, timestamp, and a message with role and content.",
   "type": "object",
   "required": ["type", "message", "sessionId", "timestamp"],
   "properties": {
@@ -15,21 +15,45 @@
     "timestamp": {
       "type": "string"
     },
-    "message": {
-      "type": "object",
-      "required": ["role"],
-      "properties": {
-        "role": {
-          "type": "string"
-        },
-        "content": {}
-      }
-    },
     "cwd": {
       "type": "string"
     },
     "gitBranch": {
       "type": "string"
+    },
+    "message": {
+      "type": "object",
+      "required": ["role", "content"],
+      "properties": {
+        "role": {
+          "type": "string",
+          "enum": ["user", "assistant", "tool_result"]
+        },
+        "content": {
+          "oneOf": [
+            { "type": "string" },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["type"],
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": ["text", "tool_use", "tool_result"]
+                  },
+                  "text": { "type": "string" },
+                  "id": { "type": "string" },
+                  "name": { "type": "string" },
+                  "input": { "type": "object" },
+                  "tool_use_id": { "type": "string" },
+                  "content": { "type": "string" }
+                }
+              }
+            }
+          ]
+        }
+      }
     }
   }
 }
