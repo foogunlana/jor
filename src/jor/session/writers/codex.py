@@ -22,7 +22,7 @@ class CodexWriter:
     def resume_command(self, session_file: Path) -> str:
         stem = session_file.stem
         session_id = stem[len("rollout-"):] if stem.startswith("rollout-") else stem
-        return f"codex --resume {session_id}"
+        return f"codex resume {session_id}"
 
     def _to_record(self, msg: JorMessage) -> dict:
         if msg.role == "tool_result":
