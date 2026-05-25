@@ -13,7 +13,7 @@ class CodexLauncher:
     def __init__(self, codex_home: Path | None = None) -> None:
         self._home = codex_home or Path.home() / ".codex"
 
-    def launch(self, messages: list[JorMessage]) -> None:
+    def launch(self, messages: list[JorMessage], session_id: str | None = None) -> None:
         writer = CodexWriter()
         target_dir = self._home / "sessions"
         _, out = writer.write(messages, target_dir)
