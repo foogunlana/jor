@@ -19,7 +19,7 @@ class ClaudeCodeLauncher:
             cmd = f"claude --resume {session_id}"
         else:
             project_dir = _project_dir_name(project) if project else "jor-imported"
-            target_dir = self._home / "projects" / project_dir / "sessions"
+            target_dir = self._home / "projects" / project_dir
             target_dir.mkdir(parents=True, exist_ok=True)
             sid = str(uuid.uuid4())
             writer = ClaudeCodeWriter()
