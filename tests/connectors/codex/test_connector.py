@@ -9,7 +9,7 @@ from jor.connectors.codex.connector import CodexConnector
 from jor.core.schema import JorMessage
 
 
-FIXTURE = Path(__file__).parent / "fixtures" / "codex_session.jsonl"
+FIXTURE = Path(__file__).parent.parent.parent / "fixtures" / "codex_session.jsonl"
 
 
 @pytest.fixture()

@@ -12,7 +12,7 @@ import uuid
 from pathlib import Path
 
 from jor.core.schema import JorMessage
-from jor.claude_code.writer import ClaudeCodeWriter
+from jor.connectors.claude_code.writer import ClaudeCodeWriter
 
 
 class ClaudeCodeLauncher:

@@ -12,7 +12,7 @@ import subprocess
 from pathlib import Path
 
 from jor.core.schema import JorMessage
-from jor.codex.writer import CodexWriter
+from jor.connectors.codex.writer import CodexWriter
 
 
 class CodexLauncher:

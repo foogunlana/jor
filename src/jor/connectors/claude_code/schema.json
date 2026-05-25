@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Claude Code JSONL Record",
+  "description": "Schema for a single line in a Claude Code session JSONL file.",
+  "type": "object",
+  "required": ["type", "message", "sessionId", "timestamp"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["user", "assistant", "tool_result"]
+    },
+    "sessionId": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "string"
+    },
+    "message": {
+      "type": "object",
+      "required": ["role"],
+      "properties": {
+        "role": {
+          "type": "string"
+        },
+        "content": {}
+      }
+    },
+    "cwd": {
+      "type": "string"
+    },
+    "gitBranch": {
+      "type": "string"
+    }
+  }
+}

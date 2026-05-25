@@ -6,12 +6,12 @@ from pathlib import Path
 
 import click
 
-from jor.claude_code.connector import ClaudeCodeConnector
-from jor.claude_code.launcher import ClaudeCodeLauncher
-from jor.claude_code.writer import ClaudeCodeWriter
-from jor.codex.connector import CodexConnector
-from jor.codex.launcher import CodexLauncher
-from jor.codex.writer import CodexWriter
+from jor.connectors.claude_code.connector import ClaudeCodeConnector
+from jor.connectors.claude_code.launcher import ClaudeCodeLauncher
+from jor.connectors.claude_code.writer import ClaudeCodeWriter
+from jor.connectors.codex.connector import CodexConnector
+from jor.connectors.codex.launcher import CodexLauncher
+from jor.connectors.codex.writer import CodexWriter
 from jor.core.index import load_index
 from jor.core.reader import read_session
 from jor.core.scanner import Scanner

@@ -1,4 +1,4 @@
-"""Failing tests for the Claude Code session writer — RED phase."""
+"""Tests for the Claude Code session writer."""
 
 from __future__ import annotations
 
@@ -86,7 +86,7 @@ def test_session_id_is_consistent_across_lines(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Role → type mapping
+# Role -> type mapping
 # ---------------------------------------------------------------------------
 
 

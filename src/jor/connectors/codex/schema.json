@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Codex JSONL Record",
+  "description": "Schema for a single line in a Codex session JSONL file.",
+  "type": "object",
+  "required": ["timestamp", "type"],
+  "properties": {
+    "timestamp": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": ["session_meta", "response_item", "event_msg", "turn_context"]
+    },
+    "payload": {
+      "type": "object"
+    }
+  }
+}

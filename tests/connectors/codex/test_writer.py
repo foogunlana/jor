@@ -1,4 +1,4 @@
-"""Failing tests for the Codex session writer — RED phase."""
+"""Tests for the Codex session writer."""
 
 from __future__ import annotations
 
