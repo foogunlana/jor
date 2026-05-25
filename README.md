@@ -21,15 +21,22 @@ pip install jor
 # Discover all AI sessions on your machine
 jor discover
 
-# List indexed sessions
+# List indexed sessions (newest first)
 jor list
+jor list --codex                     # only Codex sessions
+jor list --claude-code               # only Claude Code sessions
+jor list -q "auth refactor"          # search titles
+jor list --path /code/myapp          # filter by project
 
 # Convert a session to another tool's format
-jor convert <session-id> --codex     # Claude Code → Codex
-jor convert <session-id>             # anything → Claude Code (default)
+jor convert <session-id>             # auto: converts to the other tool
+jor convert <session-id> --codex     # explicit: convert to Codex
+jor convert <session-id> --claude-code
 
-# Convert and launch the target tool
-jor open <session-id> --codex
+# Open a session (resume in its original tool, or cross-tool)
+jor open <session-id>                # resume in original tool
+jor open <session-id> --codex        # open in Codex
+jor open <session-id> --claude-code  # open in Claude Code
 ```
 
 ## How It Works
@@ -43,19 +50,20 @@ Sessions are portable — file paths are stored relative, and source provenance 
 
 ## Adding a Connector
 
-Each connector lives in `src/jor/connectors/<tool_name>/` and has 4 files:
+Each connector is one class + one schema. That's it.
 
 ```
 src/jor/connectors/my_tool/
-├── schema.json      # describes what one JSONL line looks like
-├── connector.py     # subclass of BaseConnector — reads native format
-├── writer.py        # subclass of BaseWriter — writes native format
-└── launcher.py      # subclass of BaseLauncher — launches the tool
+├── __init__.py
+├── schema.json      # format contract — what one JSONL line looks like
+└── connector.py     # one class: reads, writes, and launches sessions
 ```
 
 ### 1. schema.json
 
-A JSON Schema that validates one line of the tool's session JSONL file. This is the format contract — it documents the native format and catches format drift in tests. Be specific about the message structure, not just top-level fields.
+A JSON Schema that validates one line of the tool's native session file. This catches format drift — if the tool changes its format, schema validation fails in tests before the parser silently produces garbage.
+
+Be specific about the message structure, not just top-level fields:
 
 ```json
 {
@@ -79,9 +87,23 @@ A JSON Schema that validates one line of the tool's session JSONL file. This is 
 
 ### 2. connector.py
 
-Subclass `BaseConnector` and implement two methods — `extract_metadata()` and `parse_record()`. All JSONL scanning, file writing, and index creation is handled by the base class.
+Subclass `BaseConnector` and implement these methods:
+
+| Method | Purpose |
+|--------|---------|
+| `extract_metadata(records, session_path)` | Pull title, project, timestamps from raw records |
+| `from_record(record, source_id)` | Convert one native record → JorMessage (reading) |
+| `to_record(msg, session_id)` | Convert one JorMessage → native record (writing) |
+| `write(messages, target)` | Write a session file, return (session_id, path) |
+| `resume_command(session_file)` | Shell command to resume (e.g. `"mytool resume {id}"`) |
+| `write_session(messages, project)` | Write + return (session_id, resume_cmd, path) |
+
+The base class handles all boilerplate: JSONL scanning, JSON parsing, index creation, launching.
 
 ```python
+import uuid
+from pathlib import Path
+
 from jor.connectors.base import BaseConnector
 from jor.core.schema import JorMessage
 
@@ -90,26 +112,24 @@ class MyToolConnector(BaseConnector):
     GLOB_PATTERN = "sessions/*.jsonl"       # where to find session files
     DETECT_PATH = "sessions"                # dir to check in detect()
     DEFAULT_HOME = Path.home() / ".my_tool" # tool's home directory
-    STRICT_JSON = False                     # True = abort file on bad line
+    STRICT_JSON = False                     # True = abort entire file on bad line
+    RESUME_CMD = "mytool resume {session_id}"
 
     def __init__(self, my_tool_home=None):
         super().__init__(home_path=my_tool_home)
 
-    def extract_metadata(self, records, session_path):
-        """Pull session-level info from the raw records.
+    # --- Reading ---
 
-        Must return dict with keys: title, project, started_at, source_id.
-        Title falls back to the first user message if left empty.
-        """
+    def extract_metadata(self, records, session_path):
         return {
             "source_id": session_path.stem,
-            "started_at": records[0].get("timestamp", ""),
-            "project": records[0].get("cwd", ""),
-            "title": "",
+            "started_at": records[0].get("timestamp", "") if records else "",
+            "project": records[0].get("cwd", "") if records else "",
+            "title": "",  # falls back to first user message
         }
 
-    def parse_record(self, record, source_id):
-        """Convert one native JSONL record to a JorMessage. Return None to skip."""
+    def from_record(self, record, source_id):
+        """Native record → JorMessage. Return None to skip."""
         if record.get("type") == "user":
             return JorMessage(
                 id=str(uuid.uuid4()),
@@ -119,16 +139,38 @@ class MyToolConnector(BaseConnector):
                 source_id=source_id,
             )
         return None
+
+    # --- Writing ---
+
+    def to_record(self, msg, session_id):
+        """JorMessage → native record."""
+        return {"type": msg.role, "message": {"role": msg.role, "content": msg.content}}
+
+    def write(self, messages, target_dir):
+        target_dir.mkdir(parents=True, exist_ok=True)
+        sid = str(uuid.uuid4())
+        path = target_dir / f"{sid}.jsonl"
+        self.write_jsonl(messages, path, sid)
+        return sid, path
+
+    def resume_command(self, session_file):
+        return f"mytool resume {session_file.stem}"
+
+    def write_session(self, messages, project):
+        sid, path = self.write(messages, self._home / "sessions")
+        return sid, self.resume_command(path), path
 ```
 
-### 4. Testing
+### 3. Testing
 
-Add a fixture at `tests/fixtures/my_tool_session.jsonl` with real (or realistic) session data. Then create tests at `tests/connectors/my_tool/`:
+Create a fixture at `tests/fixtures/my_tool_session.jsonl` with real session data (copy from the actual tool, don't invent it — see RALPH.md ground truth rules).
 
-- **test_parser.py** — unit tests for `parse_record()` and `extract_metadata()`
+Then add tests at `tests/connectors/my_tool/`:
+
+- **test_parser.py** — unit tests for `from_record()`, `to_record()`, and `extract_metadata()`
 - **test_connector.py** — integration tests that scan a fixture and verify IndexEntry output
 
-The schema is validated automatically — add a test class to `tests/test_schemas.py`:
+Schema validation is automatic — add a test class to `tests/test_schemas.py`:
 
 ```python
 class TestMyToolSchema(BaseSchemaTest):
@@ -136,14 +178,22 @@ class TestMyToolSchema(BaseSchemaTest):
     fixture = "my_tool_session.jsonl"
 ```
 
-### 5. Register
+### 4. Register
 
 Add your connector to `cli.py`:
 
 ```python
 from jor.connectors.my_tool.connector import MyToolConnector
 
+# In discover:
 connectors = [ClaudeCodeConnector(), CodexConnector(), MyToolConnector()]
+
+# In CONNECTORS dict:
+CONNECTORS = {
+    "claude_code": ClaudeCodeConnector,
+    "codex": CodexConnector,
+    "my_tool": MyToolConnector,
+}
 ```
 
 ## License
