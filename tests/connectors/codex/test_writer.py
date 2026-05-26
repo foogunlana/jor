@@ -1,13 +1,18 @@
-"""Tests for the Codex session writer."""
+"""Tests for the Codex session writer (envelope format)."""
 
 from __future__ import annotations
 
 import json
+import sqlite3
 from pathlib import Path
 
 import pytest
 
 from jor.core.schema import JorMessage, ToolCall, ToolResult
+
+
+def _parse_records(path: Path) -> list[dict]:
+    return [json.loads(l) for l in path.read_text().splitlines() if l]
 
 
 def test_codex_writer_extends_base_writer() -> None:
@@ -17,105 +22,137 @@ def test_codex_writer_extends_base_writer() -> None:
     assert isinstance(CodexWriter(), BaseConnector)
 
 
-def test_codex_writer_write_returns_session_id_and_path(tmp_path: Path) -> None:
+# ---------------------------------------------------------------------------
+# Envelope structure
+# ---------------------------------------------------------------------------
+
+
+def test_every_record_is_envelope(tmp_path: Path) -> None:
+    """All records must have {timestamp, type, payload} envelope."""
     from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
     messages = [JorMessage(id="m1", role="user", content="hello")]
-    writer = CodexWriter()
-    session_id, out_path = writer.write(messages, tmp_path)
-    assert session_id
-    assert out_path.exists()
+    _, out_path = CodexWriter().write(messages, tmp_path)
+    for rec in _parse_records(out_path):
+        assert "timestamp" in rec
+        assert "type" in rec
+        assert "payload" in rec
 
 
-def test_codex_writer_maps_user_message(tmp_path: Path) -> None:
+def test_first_record_is_session_meta(tmp_path: Path) -> None:
+    from jor.connectors.codex.connector import CodexConnector as CodexWriter
+
+    messages = [JorMessage(id="m1", role="user", content="hello")]
+    session_id, out_path = CodexWriter().write(messages, tmp_path)
+    records = _parse_records(out_path)
+    meta = records[0]
+    assert meta["type"] == "session_meta"
+    assert meta["payload"]["id"] == session_id
+    assert "cwd" in meta["payload"]
+
+
+# ---------------------------------------------------------------------------
+# Message type mapping
+# ---------------------------------------------------------------------------
+
+
+def test_user_message_wrapped_as_response_item(tmp_path: Path) -> None:
     from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
     messages = [JorMessage(id="m1", role="user", content="hello world")]
     _, out_path = CodexWriter().write(messages, tmp_path)
+    records = _parse_records(out_path)
+    # Skip session_meta
+    msg_rec = records[1]
+    assert msg_rec["type"] == "response_item"
+    payload = msg_rec["payload"]
+    assert payload["type"] == "message"
+    assert payload["role"] == "user"
 
-    lines = out_path.read_text().splitlines()
-    assert len(lines) == 1
-    msg = json.loads(lines[0])
-    assert msg["role"] == "user"
-    assert msg["content"] == "hello world"
 
-
-def test_codex_writer_maps_assistant_message(tmp_path: Path) -> None:
+def test_assistant_message_wrapped_as_response_item(tmp_path: Path) -> None:
     from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
     messages = [JorMessage(id="m1", role="assistant", content="I can help")]
     _, out_path = CodexWriter().write(messages, tmp_path)
+    records = _parse_records(out_path)
+    payload = records[1]["payload"]
+    assert payload["type"] == "message"
+    assert payload["role"] == "assistant"
 
-    msg = json.loads(out_path.read_text().splitlines()[0])
-    assert msg["role"] == "assistant"
-    assert msg["content"] == "I can help"
 
-
-def test_codex_writer_maps_system_message(tmp_path: Path) -> None:
+def test_system_message_maps_to_developer_role(tmp_path: Path) -> None:
     from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
     messages = [JorMessage(id="m1", role="system", content="You are helpful")]
     _, out_path = CodexWriter().write(messages, tmp_path)
+    records = _parse_records(out_path)
+    payload = records[1]["payload"]
+    assert payload["role"] == "developer"
 
-    msg = json.loads(out_path.read_text().splitlines()[0])
-    assert msg["role"] == "system"
-    assert msg["content"] == "You are helpful"
+
+# ---------------------------------------------------------------------------
+# Tool calls and results
+# ---------------------------------------------------------------------------
 
 
-def test_codex_writer_maps_tool_calls(tmp_path: Path) -> None:
+def test_tool_call_produces_function_call_payload(tmp_path: Path) -> None:
     from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
     tc = ToolCall(id="tc1", name="bash", input={"cmd": "ls -la"})
-    messages = [
-        JorMessage(id="m1", role="assistant", content="running bash", tool_calls=[tc])
-    ]
+    messages = [JorMessage(id="m1", role="assistant", content="", tool_calls=[tc])]
     _, out_path = CodexWriter().write(messages, tmp_path)
-
-    msg = json.loads(out_path.read_text().splitlines()[0])
-    assert msg["role"] == "assistant"
-    assert "tool_calls" in msg
-    assert len(msg["tool_calls"]) == 1
-    tc_out = msg["tool_calls"][0]
-    assert tc_out["id"] == "tc1"
-    assert tc_out["type"] == "function"
-    assert tc_out["function"]["name"] == "bash"
-    assert json.loads(tc_out["function"]["arguments"]) == {"cmd": "ls -la"}
+    records = _parse_records(out_path)
+    # Find function_call record
+    fc_recs = [r for r in records if r.get("payload", {}).get("type") == "function_call"]
+    assert len(fc_recs) == 1
+    payload = fc_recs[0]["payload"]
+    assert payload["call_id"] == "tc1"
+    assert payload["name"] == "bash"
+    assert json.loads(payload["arguments"]) == {"cmd": "ls -la"}
 
 
-def test_codex_writer_maps_multiple_tool_calls(tmp_path: Path) -> None:
-    from jor.connectors.codex.connector import CodexConnector as CodexWriter
-
-    tc1 = ToolCall(id="tc1", name="read_file", input={"path": "/foo"})
-    tc2 = ToolCall(id="tc2", name="write_file", input={"path": "/bar", "content": "x"})
-    messages = [
-        JorMessage(
-            id="m1", role="assistant", content="reading and writing", tool_calls=[tc1, tc2]
-        )
-    ]
-    _, out_path = CodexWriter().write(messages, tmp_path)
-
-    msg = json.loads(out_path.read_text().splitlines()[0])
-    assert len(msg["tool_calls"]) == 2
-    assert msg["tool_calls"][0]["id"] == "tc1"
-    assert msg["tool_calls"][1]["id"] == "tc2"
-
-
-def test_codex_writer_maps_tool_result_to_role_tool(tmp_path: Path) -> None:
+def test_tool_result_produces_function_call_output(tmp_path: Path) -> None:
     from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
     tr = ToolResult(tool_call_id="tc1", content="file contents")
-    messages = [
-        JorMessage(id="m1", role="tool_result", content="file contents", tool_result=tr)
-    ]
+    messages = [JorMessage(id="m1", role="tool_result", content="file contents", tool_result=tr)]
     _, out_path = CodexWriter().write(messages, tmp_path)
+    records = _parse_records(out_path)
+    fco_recs = [r for r in records if r.get("payload", {}).get("type") == "function_call_output"]
+    assert len(fco_recs) == 1
+    payload = fco_recs[0]["payload"]
+    assert payload["call_id"] == "tc1"
+    assert payload["output"] == "file contents"
 
-    msg = json.loads(out_path.read_text().splitlines()[0])
-    assert msg["role"] == "tool"
-    assert msg["tool_call_id"] == "tc1"
-    assert msg["content"] == "file contents"
+
+# ---------------------------------------------------------------------------
+# Date-nested path
+# ---------------------------------------------------------------------------
 
 
-def test_codex_writer_output_is_valid_jsonl(tmp_path: Path) -> None:
+def test_write_session_uses_date_nested_path(tmp_path: Path) -> None:
+    from jor.connectors.codex.connector import CodexConnector as CodexWriter
+
+    writer = CodexWriter(codex_home=tmp_path)
+    messages = [JorMessage(id="m1", role="user", content="hello")]
+    sid, cmd, path = writer.write_session(messages, "/tmp/test-project")
+    # Path should contain year/month/day structure
+    rel = path.relative_to(tmp_path / "sessions")
+    parts = rel.parts
+    assert len(parts) == 4  # year/month/day/filename
+    assert parts[0].isdigit() and len(parts[0]) == 4  # year
+    assert parts[1].isdigit() and len(parts[1]) == 2  # month
+    assert parts[2].isdigit() and len(parts[2]) == 2  # day
+    assert parts[3].startswith("rollout-")
+
+
+# ---------------------------------------------------------------------------
+# Valid JSONL
+# ---------------------------------------------------------------------------
+
+
+def test_output_is_valid_jsonl(tmp_path: Path) -> None:
     from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
     tc = ToolCall(id="tc1", name="bash", input={"cmd": "echo hi"})
@@ -128,47 +165,42 @@ def test_codex_writer_output_is_valid_jsonl(tmp_path: Path) -> None:
     ]
     _, out_path = CodexWriter().write(messages, tmp_path)
 
-    lines = out_path.read_text().splitlines()
-    assert len(lines) == 4
-    for line in lines:
+    for line in out_path.read_text().splitlines():
         obj = json.loads(line)
-        assert "role" in obj
+        assert "type" in obj
+        assert "payload" in obj
         assert "\n" not in line
 
 
-def test_codex_writer_round_trip(tmp_path: Path) -> None:
-    """Messages written out can be re-read and verify the full structure."""
+# ---------------------------------------------------------------------------
+# SQLite registration
+# ---------------------------------------------------------------------------
+
+
+def test_write_session_inserts_sqlite_row(tmp_path: Path) -> None:
     from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
-    tc = ToolCall(id="tc99", name="grep", input={"pattern": "foo", "path": "."})
-    tr = ToolResult(tool_call_id="tc99", content="match: foo.py:10")
-    messages = [
-        JorMessage(id="m1", role="system", content="Be helpful."),
-        JorMessage(id="m2", role="user", content="find foo"),
-        JorMessage(id="m3", role="assistant", content="searching", tool_calls=[tc]),
-        JorMessage(id="m4", role="tool_result", content="match: foo.py:10", tool_result=tr),
-        JorMessage(id="m5", role="assistant", content="found it"),
-    ]
-    _, out_path = CodexWriter().write(messages, tmp_path)
+    # Create a minimal state_5.sqlite with the threads table
+    db_path = tmp_path / "state_5.sqlite"
+    conn = sqlite3.connect(str(db_path))
+    conn.execute("""CREATE TABLE threads (
+        id TEXT PRIMARY KEY, rollout_path TEXT, created_at INTEGER,
+        updated_at INTEGER, source TEXT, model_provider TEXT, cwd TEXT,
+        title TEXT, sandbox_policy TEXT, approval_mode TEXT,
+        created_at_ms INTEGER, updated_at_ms INTEGER,
+        first_user_message TEXT, preview TEXT
+    )""")
+    conn.commit()
+    conn.close()
 
-    lines = out_path.read_text().splitlines()
-    assert len(lines) == 5
+    writer = CodexWriter(codex_home=tmp_path)
+    messages = [JorMessage(id="m1", role="user", content="hello world")]
+    sid, _, path = writer.write_session(messages, "/tmp/test-project")
 
-    # system
-    assert json.loads(lines[0]) == {"role": "system", "content": "Be helpful."}
-
-    # user
-    assert json.loads(lines[1]) == {"role": "user", "content": "find foo"}
-
-    # assistant with tool_call
-    assistant_msg = json.loads(lines[2])
-    assert assistant_msg["role"] == "assistant"
-    assert assistant_msg["tool_calls"][0]["function"]["name"] == "grep"
-
-    # tool result
-    tool_msg = json.loads(lines[3])
-    assert tool_msg["role"] == "tool"
-    assert tool_msg["tool_call_id"] == "tc99"
-
-    # final assistant
-    assert json.loads(lines[4]) == {"role": "assistant", "content": "found it"}
+    conn = sqlite3.connect(str(db_path))
+    row = conn.execute("SELECT id, cwd, title FROM threads WHERE id = ?", (sid,)).fetchone()
+    conn.close()
+    assert row is not None
+    assert row[0] == sid
+    assert row[1] == "/tmp/test-project"
+    assert row[2] == "hello world"

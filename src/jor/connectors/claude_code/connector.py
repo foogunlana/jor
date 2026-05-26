@@ -11,7 +11,10 @@ use Anthropic's content block format (text blocks + tool_use blocks).
 from __future__ import annotations
 
 import uuid
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+import json
 
 from jor.connectors.base import BaseConnector
 from jor.core.schema import JorMessage, ToolCall, ToolResult
@@ -145,9 +148,13 @@ class ClaudeCodeConnector(BaseConnector):
     # --- Writing ---
 
     def to_record(self, msg: JorMessage, session_id: str) -> dict:
+        # Generate a timestamp if missing — empty timestamps break --resume
+        timestamp = msg.timestamp
+        if not timestamp:
+            timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%f")[:-3] + "Z"
         base = {
             "sessionId": session_id,
-            "timestamp": msg.timestamp or "",
+            "timestamp": timestamp,
         }
         if msg.role == "user":
             return {**base, "type": "user", "message": {"role": "user", "content": msg.content}}
@@ -183,6 +190,21 @@ class ClaudeCodeConnector(BaseConnector):
 
         else:
             return {**base, "type": msg.role, "message": {"role": msg.role, "content": msg.content}}
+
+    def write_jsonl(self, messages: list[JorMessage], path: Path, session_id: str) -> None:
+        """Serialize messages to JSONL with uuid/parentUuid chain for --resume."""
+        path.parent.mkdir(parents=True, exist_ok=True)
+        records: list[dict] = []
+        prev_uuid = None
+        for msg in messages:
+            result = self.to_record(msg, session_id)
+            items = result if isinstance(result, list) else [result]
+            for rec in items:
+                rec["uuid"] = str(uuid.uuid4())
+                rec["parentUuid"] = prev_uuid
+                prev_uuid = rec["uuid"]
+                records.append(rec)
+        path.write_text("\n".join(json.dumps(r) for r in records) + "\n")
 
     def write(self, messages: list[JorMessage], target_path: Path) -> tuple[str, Path]:
         """Write messages to target_path (full file path). Returns (session_id, path)."""

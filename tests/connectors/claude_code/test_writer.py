@@ -191,13 +191,47 @@ def test_timestamp_preserved_in_output(tmp_path: Path) -> None:
     assert rec["timestamp"] == ts
 
 
-def test_missing_timestamp_defaults_to_empty_string(tmp_path: Path) -> None:
+def test_missing_timestamp_gets_generated(tmp_path: Path) -> None:
     from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
 
     msgs = [JorMessage(id="m1", role="user", content="hi")]
     ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
     rec = json.loads((tmp_path / "out.jsonl").read_text().splitlines()[0])
-    assert "timestamp" in rec
+    assert rec["timestamp"]  # must be non-empty for --resume to work
+
+
+# ---------------------------------------------------------------------------
+# UUID chain: records must have uuid + parentUuid linked list
+# ---------------------------------------------------------------------------
+
+
+def test_each_record_has_uuid(tmp_path: Path) -> None:
+    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+
+    msgs = [
+        JorMessage(id="m1", role="user", content="hello", timestamp="2026-01-01T00:00:00Z"),
+        JorMessage(id="m2", role="assistant", content="hi", timestamp="2026-01-01T00:00:01Z"),
+    ]
+    ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
+    lines = [json.loads(l) for l in (tmp_path / "out.jsonl").read_text().splitlines() if l]
+    for rec in lines:
+        assert "uuid" in rec
+        assert rec["uuid"]  # non-empty
+
+
+def test_parent_uuid_forms_linked_list(tmp_path: Path) -> None:
+    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+
+    msgs = [
+        JorMessage(id="m1", role="user", content="hello", timestamp="2026-01-01T00:00:00Z"),
+        JorMessage(id="m2", role="assistant", content="hi", timestamp="2026-01-01T00:00:01Z"),
+        JorMessage(id="m3", role="user", content="thanks", timestamp="2026-01-01T00:00:02Z"),
+    ]
+    ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
+    lines = [json.loads(l) for l in (tmp_path / "out.jsonl").read_text().splitlines() if l]
+    assert lines[0]["parentUuid"] is None  # first record has no parent
+    assert lines[1]["parentUuid"] == lines[0]["uuid"]
+    assert lines[2]["parentUuid"] == lines[1]["uuid"]
 
 
 # ---------------------------------------------------------------------------

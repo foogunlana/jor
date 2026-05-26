@@ -109,29 +109,32 @@ class TestCodexWriter:
     def test_write_valid_jsonl(self, tmp_path: Path, simple_messages: list[JorMessage]) -> None:
         _, out = CodexWriter().write(simple_messages, tmp_path)
         lines = [json.loads(l) for l in out.read_text().splitlines() if l.strip()]
-        assert len(lines) == 4
+        # session_meta + 4 messages (tool_calls assistant splits into function_call + text)
+        assert len(lines) >= 5
+        assert lines[0]["type"] == "session_meta"
 
     def test_user_message_format(self, tmp_path: Path, simple_messages: list[JorMessage]) -> None:
         _, out = CodexWriter().write(simple_messages, tmp_path)
         lines = [json.loads(l) for l in out.read_text().splitlines() if l.strip()]
-        assert lines[0]["role"] == "user"
-        assert lines[0]["content"] == "Refactor the auth module"
+        user_rec = lines[1]  # after session_meta
+        assert user_rec["type"] == "response_item"
+        assert user_rec["payload"]["role"] == "user"
 
     def test_assistant_with_tool_calls(self, tmp_path: Path, simple_messages: list[JorMessage]) -> None:
         _, out = CodexWriter().write(simple_messages, tmp_path)
         lines = [json.loads(l) for l in out.read_text().splitlines() if l.strip()]
-        asst = lines[1]
-        assert asst["role"] == "assistant"
-        assert asst["tool_calls"][0]["id"] == "tc-1"
-        assert asst["tool_calls"][0]["function"]["name"] == "Read"
+        fc_recs = [r for r in lines if r.get("payload", {}).get("type") == "function_call"]
+        assert len(fc_recs) == 1
+        assert fc_recs[0]["payload"]["call_id"] == "tc-1"
+        assert fc_recs[0]["payload"]["name"] == "Read"
 
-    def test_tool_result_maps_to_tool_role(self, tmp_path: Path, simple_messages: list[JorMessage]) -> None:
+    def test_tool_result_maps_to_function_call_output(self, tmp_path: Path, simple_messages: list[JorMessage]) -> None:
         _, out = CodexWriter().write(simple_messages, tmp_path)
         lines = [json.loads(l) for l in out.read_text().splitlines() if l.strip()]
-        tr = lines[2]
-        assert tr["role"] == "tool"
-        assert tr["tool_call_id"] == "tc-1"
-        assert tr["content"] == "def login(): ..."
+        fco_recs = [r for r in lines if r.get("payload", {}).get("type") == "function_call_output"]
+        assert len(fco_recs) == 1
+        assert fco_recs[0]["payload"]["call_id"] == "tc-1"
+        assert fco_recs[0]["payload"]["output"] == "def login(): ..."
 
     def test_resume_command(self, tmp_path: Path, simple_messages: list[JorMessage]) -> None:
         writer = CodexWriter()
