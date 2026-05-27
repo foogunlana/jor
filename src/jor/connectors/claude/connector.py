@@ -1,6 +1,6 @@
-"""Claude Code connector — reads, writes, and launches sessions.
+"""Claude connector — reads, writes, and launches sessions.
 
-Claude Code stores sessions as JSONL files at:
+Claude stores sessions as JSONL files at:
     ~/.claude/projects/<project-name>/<session-uuid>.jsonl
 
 Each line is a JSON record with {sessionId, timestamp, type, message}.
@@ -20,10 +20,10 @@ from jor.connectors.base import BaseConnector
 from jor.core.schema import JorMessage, ToolCall, ToolResult
 
 
-class ClaudeCodeConnector(BaseConnector):
-    """Read, write, and launch Claude Code sessions."""
+class ClaudeConnector(BaseConnector):
+    """Read, write, and launch Claude sessions."""
 
-    TOOL_NAME = "claude_code"
+    TOOL_NAME = "claude"
     GLOB_PATTERN = "projects/*/*.jsonl"
     DETECT_PATH = "projects"
     DEFAULT_HOME = Path.home() / ".claude"
@@ -103,7 +103,7 @@ class ClaudeCodeConnector(BaseConnector):
                             ),
                             timestamp=timestamp,
                             metadata=metadata or None,
-                            source_tool="claude_code",
+                            source_tool="claude",
                             source_id=session_id,
                         ))
                     return results
@@ -116,7 +116,7 @@ class ClaudeCodeConnector(BaseConnector):
                 content=content,
                 timestamp=timestamp,
                 metadata=metadata or None,
-                source_tool="claude_code",
+                source_tool="claude",
                 source_id=session_id,
             )
 
@@ -145,7 +145,7 @@ class ClaudeCodeConnector(BaseConnector):
                 tool_calls=tool_calls,
                 timestamp=timestamp,
                 metadata=metadata or None,
-                source_tool="claude_code",
+                source_tool="claude",
                 source_id=session_id,
             )
 
@@ -171,7 +171,7 @@ class ClaudeCodeConnector(BaseConnector):
                             ),
                             timestamp=timestamp,
                             metadata=metadata or None,
-                            source_tool="claude_code",
+                            source_tool="claude",
                             source_id=session_id,
                         ))
                 return results if results else None
@@ -268,7 +268,7 @@ class ClaudeCodeConnector(BaseConnector):
 
 
 def _project_dir_name(project_path: str) -> str:
-    """Convert a project path to Claude Code's project directory name.
+    """Convert a project path to Claude's project directory name.
 
     /Users/foo/code/bar -> -Users-foo-code-bar
     """

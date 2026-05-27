@@ -1,4 +1,4 @@
-"""Tests for the Claude Code session writer."""
+"""Tests for the Claude session writer."""
 
 from __future__ import annotations
 
@@ -15,11 +15,11 @@ from jor.core.schema import JorMessage, ToolCall, ToolResult
 # ---------------------------------------------------------------------------
 
 
-def test_claude_code_writer_extends_base_writer() -> None:
+def test_claude_writer_extends_base_writer() -> None:
     from jor.connectors.base import BaseConnector
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+    from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
 
-    assert isinstance(ClaudeCodeWriter(), BaseConnector)
+    assert isinstance(ClaudeWriter(), BaseConnector)
 
 
 # ---------------------------------------------------------------------------
@@ -28,21 +28,21 @@ def test_claude_code_writer_extends_base_writer() -> None:
 
 
 def test_write_returns_session_id_and_path(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+    from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
 
     msgs = [JorMessage(id="m1", role="user", content="hello")]
-    session_id, out_path = ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
+    session_id, out_path = ClaudeWriter().write(msgs, tmp_path / "out.jsonl")
     assert isinstance(session_id, str)
     assert len(session_id) > 0
     assert isinstance(out_path, Path)
 
 
 def test_write_creates_file_at_target_path(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+    from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
 
     target = tmp_path / "session.jsonl"
     msgs = [JorMessage(id="m1", role="user", content="hello")]
-    _, out_path = ClaudeCodeWriter().write(msgs, target)
+    _, out_path = ClaudeWriter().write(msgs, target)
     assert out_path == target
     assert target.exists()
 
@@ -53,10 +53,10 @@ def test_write_creates_file_at_target_path(tmp_path: Path) -> None:
 
 
 def test_each_line_has_required_keys(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+    from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
 
     msgs = [JorMessage(id="m1", role="user", content="hello", timestamp="2026-01-01T00:00:00Z")]
-    ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
+    ClaudeWriter().write(msgs, tmp_path / "out.jsonl")
     lines = [json.loads(l) for l in (tmp_path / "out.jsonl").read_text().splitlines() if l]
     assert len(lines) == 1
     rec = lines[0]
@@ -67,13 +67,13 @@ def test_each_line_has_required_keys(tmp_path: Path) -> None:
 
 
 def test_session_id_is_consistent_across_lines(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+    from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
 
     msgs = [
         JorMessage(id="m1", role="user", content="hello"),
         JorMessage(id="m2", role="assistant", content="hi"),
     ]
-    session_id, _ = ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
+    session_id, _ = ClaudeWriter().write(msgs, tmp_path / "out.jsonl")
     lines = [json.loads(l) for l in (tmp_path / "out.jsonl").read_text().splitlines() if l]
     for rec in lines:
         assert rec["sessionId"] == session_id
@@ -85,10 +85,10 @@ def test_session_id_is_consistent_across_lines(tmp_path: Path) -> None:
 
 
 def test_user_message_maps_to_type_user(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+    from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
 
     msgs = [JorMessage(id="m1", role="user", content="hello")]
-    ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
+    ClaudeWriter().write(msgs, tmp_path / "out.jsonl")
     rec = json.loads((tmp_path / "out.jsonl").read_text().splitlines()[0])
     assert rec["type"] == "user"
     assert rec["message"]["role"] == "user"
@@ -96,18 +96,18 @@ def test_user_message_maps_to_type_user(tmp_path: Path) -> None:
 
 
 def test_assistant_message_maps_to_type_assistant(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+    from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
 
     msgs = [JorMessage(id="m1", role="assistant", content="here you go")]
-    ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
+    ClaudeWriter().write(msgs, tmp_path / "out.jsonl")
     rec = json.loads((tmp_path / "out.jsonl").read_text().splitlines()[0])
     assert rec["type"] == "assistant"
     assert rec["message"]["role"] == "assistant"
 
 
 def test_tool_result_message_maps_to_type_user(tmp_path: Path) -> None:
-    """Tool results are sent as type=user in Claude Code's native format."""
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+    """Tool results are sent as type=user in Claude's native format."""
+    from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
 
     msgs = [
         JorMessage(
@@ -117,7 +117,7 @@ def test_tool_result_message_maps_to_type_user(tmp_path: Path) -> None:
             tool_result=ToolResult(tool_call_id="tc1", content="file contents"),
         )
     ]
-    ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
+    ClaudeWriter().write(msgs, tmp_path / "out.jsonl")
     rec = json.loads((tmp_path / "out.jsonl").read_text().splitlines()[0])
     assert rec["type"] == "user"
     assert rec["message"]["role"] == "user"
@@ -129,11 +129,11 @@ def test_tool_result_message_maps_to_type_user(tmp_path: Path) -> None:
 
 
 def test_assistant_with_tool_calls_produces_tool_use_content_block(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+    from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
 
     tc = ToolCall(id="tc1", name="Read", input={"file_path": "/foo.py"})
     msgs = [JorMessage(id="m1", role="assistant", content="reading file", tool_calls=[tc])]
-    ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
+    ClaudeWriter().write(msgs, tmp_path / "out.jsonl")
     rec = json.loads((tmp_path / "out.jsonl").read_text().splitlines()[0])
     content = rec["message"]["content"]
     assert isinstance(content, list)
@@ -145,11 +145,11 @@ def test_assistant_with_tool_calls_produces_tool_use_content_block(tmp_path: Pat
 
 
 def test_assistant_text_included_alongside_tool_use(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+    from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
 
     tc = ToolCall(id="tc1", name="Read", input={"file_path": "/foo.py"})
     msgs = [JorMessage(id="m1", role="assistant", content="reading file", tool_calls=[tc])]
-    ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
+    ClaudeWriter().write(msgs, tmp_path / "out.jsonl")
     rec = json.loads((tmp_path / "out.jsonl").read_text().splitlines()[0])
     content = rec["message"]["content"]
     text_blocks = [b for b in content if b.get("type") == "text"]
@@ -158,7 +158,7 @@ def test_assistant_text_included_alongside_tool_use(tmp_path: Path) -> None:
 
 
 def test_tool_result_content_block_structure(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+    from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
 
     msgs = [
         JorMessage(
@@ -168,7 +168,7 @@ def test_tool_result_content_block_structure(tmp_path: Path) -> None:
             tool_result=ToolResult(tool_call_id="tc1", content="output here"),
         )
     ]
-    ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
+    ClaudeWriter().write(msgs, tmp_path / "out.jsonl")
     rec = json.loads((tmp_path / "out.jsonl").read_text().splitlines()[0])
     assert rec["type"] == "user"
     content = rec["message"]["content"]
@@ -185,20 +185,20 @@ def test_tool_result_content_block_structure(tmp_path: Path) -> None:
 
 
 def test_timestamp_preserved_in_output(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+    from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
 
     ts = "2026-04-30T12:00:00Z"
     msgs = [JorMessage(id="m1", role="user", content="hi", timestamp=ts)]
-    ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
+    ClaudeWriter().write(msgs, tmp_path / "out.jsonl")
     rec = json.loads((tmp_path / "out.jsonl").read_text().splitlines()[0])
     assert rec["timestamp"] == ts
 
 
 def test_missing_timestamp_gets_generated(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+    from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
 
     msgs = [JorMessage(id="m1", role="user", content="hi")]
-    ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
+    ClaudeWriter().write(msgs, tmp_path / "out.jsonl")
     rec = json.loads((tmp_path / "out.jsonl").read_text().splitlines()[0])
     assert rec["timestamp"]  # must be non-empty for --resume to work
 
@@ -209,13 +209,13 @@ def test_missing_timestamp_gets_generated(tmp_path: Path) -> None:
 
 
 def test_each_record_has_uuid(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+    from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
 
     msgs = [
         JorMessage(id="m1", role="user", content="hello", timestamp="2026-01-01T00:00:00Z"),
         JorMessage(id="m2", role="assistant", content="hi", timestamp="2026-01-01T00:00:01Z"),
     ]
-    ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
+    ClaudeWriter().write(msgs, tmp_path / "out.jsonl")
     lines = [json.loads(l) for l in (tmp_path / "out.jsonl").read_text().splitlines() if l]
     for rec in lines:
         assert "uuid" in rec
@@ -223,14 +223,14 @@ def test_each_record_has_uuid(tmp_path: Path) -> None:
 
 
 def test_parent_uuid_forms_linked_list(tmp_path: Path) -> None:
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+    from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
 
     msgs = [
         JorMessage(id="m1", role="user", content="hello", timestamp="2026-01-01T00:00:00Z"),
         JorMessage(id="m2", role="assistant", content="hi", timestamp="2026-01-01T00:00:01Z"),
         JorMessage(id="m3", role="user", content="thanks", timestamp="2026-01-01T00:00:02Z"),
     ]
-    ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
+    ClaudeWriter().write(msgs, tmp_path / "out.jsonl")
     lines = [json.loads(l) for l in (tmp_path / "out.jsonl").read_text().splitlines() if l]
     assert lines[0]["parentUuid"] is None  # first record has no parent
     assert lines[1]["parentUuid"] == lines[0]["uuid"]
@@ -243,9 +243,9 @@ def test_parent_uuid_forms_linked_list(tmp_path: Path) -> None:
 
 
 def test_round_trip_parseable_by_connector(tmp_path: Path) -> None:
-    """Writer output can be re-read by the ClaudeCodeConnector."""
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
-    from jor.connectors.claude_code.connector import ClaudeCodeConnector
+    """Writer output can be re-read by the ClaudeConnector."""
+    from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
+    from jor.connectors.claude.connector import ClaudeConnector
 
     tc = ToolCall(id="tc1", name="Read", input={"file_path": "/foo.py"})
     tr = ToolResult(tool_call_id="tc1", content="file contents")
@@ -260,7 +260,7 @@ def test_round_trip_parseable_by_connector(tmp_path: Path) -> None:
     session_dir.mkdir(parents=True)
     target = session_dir / "roundtrip.jsonl"
 
-    writer = ClaudeCodeWriter()
+    writer = ClaudeWriter()
     writer.write(messages, target)
 
     # Now re-scan with the connector
@@ -268,7 +268,7 @@ def test_round_trip_parseable_by_connector(tmp_path: Path) -> None:
     jor_home.mkdir()
     (jor_home / "sessions").mkdir()
 
-    connector = ClaudeCodeConnector(claude_home=tmp_path / ".claude")
+    connector = ClaudeConnector(claude_home=tmp_path / ".claude")
     entries = connector.scan(jor_home)
     assert len(entries) == 1
 

@@ -16,7 +16,7 @@ def make_message(i: int, role: str = "user", content: str = "", files: list[str]
         role=role,
         content=content or f"Message {i}",
         files=files,
-        source_tool="claude_code",
+        source_tool="claude",
         source_id="s1",
         timestamp="2026-04-20T10:30:00Z",
     )
@@ -26,7 +26,7 @@ def make_message(i: int, role: str = "user", content: str = "", files: list[str]
 def entry() -> IndexEntry:
     return IndexEntry(
         id="jor-abc",
-        tool="claude_code",
+        tool="claude",
         source_id="s1",
         source_path="projects/foo/sessions/s1.jsonl",
         title="Auth refactor",
@@ -46,7 +46,7 @@ def session_file(tmp_path: Path) -> Path:
             role="user",
             content="Refactor auth module",
             timestamp="2026-04-20T10:30:00Z",
-            source_tool="claude_code",
+            source_tool="claude",
             source_id="s1",
             files=["auth.py", "tests/test_auth.py"],
         ),
@@ -56,7 +56,7 @@ def session_file(tmp_path: Path) -> Path:
             content="I'll help refactor.",
             tool_calls=[ToolCall(id="tc1", name="Read", input={"file_path": "auth.py"})],
             timestamp="2026-04-20T10:30:05Z",
-            source_tool="claude_code",
+            source_tool="claude",
             source_id="s1",
         ),
         JorMessage(
@@ -64,7 +64,7 @@ def session_file(tmp_path: Path) -> Path:
             role="assistant",
             content="Done.",
             timestamp="2026-04-20T10:35:00Z",
-            source_tool="claude_code",
+            source_tool="claude",
             source_id="s1",
         ),
     ]
@@ -95,7 +95,7 @@ def test_read_session_missing_file_raises_with_clear_message(tmp_path: Path) -> 
 def test_format_summary_includes_tool_in_header(session_file: Path, entry: IndexEntry) -> None:
     messages = read_session(session_file)
     summary = format_summary(messages, entry)
-    assert "claude_code" in summary
+    assert "claude" in summary
 
 
 def test_format_summary_includes_model_in_header(session_file: Path, entry: IndexEntry) -> None:

@@ -24,18 +24,18 @@ def _load_fixture_lines(filename: str) -> list[dict]:
 
 
 # ---------------------------------------------------------------------------
-# Claude Code fixture vs schema
+# Claude fixture vs schema
 # ---------------------------------------------------------------------------
 
 
-class TestClaudeCodeSchema:
+class TestClaudeSchema:
     @pytest.fixture()
     def schema(self) -> dict:
-        return _load_schema("claude_code")
+        return _load_schema("claude")
 
     @pytest.fixture()
     def records(self) -> list[dict]:
-        return _load_fixture_lines("claude_code_session.jsonl")
+        return _load_fixture_lines("claude_session.jsonl")
 
     def test_all_lines_valid(self, schema: dict, records: list[dict]) -> None:
         for i, record in enumerate(records):

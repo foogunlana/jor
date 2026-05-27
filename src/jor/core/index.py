@@ -20,7 +20,7 @@ class IndexEntry(BaseModel):
     """Metadata for one discovered session.
 
     source_id is the session's original ID in its native tool (e.g. the
-    Claude Code sessionId or Codex thread UUID). source_path is the
+    Claude sessionId or Codex thread UUID). source_path is the
     absolute path to the original session file on disk.
     """
 

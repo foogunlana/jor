@@ -11,7 +11,7 @@ def make_entry(**kwargs):
 
     defaults = {
         "id": "jor-abc123",
-        "tool": "claude_code",
+        "tool": "claude",
         "source_id": "orig-uuid",
         "source_path": "~/.claude/projects/hash/sessions/uuid.jsonl",
         "title": "Auth module refactor",
@@ -30,7 +30,7 @@ def make_entry(**kwargs):
 def test_index_entry_required_fields():
     entry = make_entry()
     assert entry.id == "jor-abc123"
-    assert entry.tool == "claude_code"
+    assert entry.tool == "claude"
     assert entry.source_id == "orig-uuid"
     assert entry.source_path == "~/.claude/projects/hash/sessions/uuid.jsonl"
     assert entry.title == "Auth module refactor"
@@ -46,7 +46,7 @@ def test_index_entry_optional_fields_default_none():
 
     entry = IndexEntry(
         id="jor-x",
-        tool="claude_code",
+        tool="claude",
         source_id="s1",
         source_path="~/path",
         title="t",

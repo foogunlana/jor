@@ -7,7 +7,7 @@ from pathlib import Path
 
 import click
 
-from jor.connectors.claude_code.connector import ClaudeCodeConnector
+from jor.connectors.claude.connector import ClaudeConnector
 from jor.connectors.codex.connector import CodexConnector
 from jor.core.index import IndexEntry, load_index, save_index, upsert_session
 from jor.core.reader import read_session
@@ -16,12 +16,12 @@ from jor.core.scanner import Scanner
 JOR_HOME = Path.home() / ".jor"
 
 CONNECTORS = {
-    "claude_code": ClaudeCodeConnector,
+    "claude": ClaudeConnector,
     "codex": CodexConnector,
 }
 
 
-def _connector_for(tool: str) -> ClaudeCodeConnector | CodexConnector:
+def _connector_for(tool: str) -> ClaudeConnector | CodexConnector:
     return CONNECTORS[tool]()
 
 
@@ -41,7 +41,7 @@ def main() -> None:
 def discover() -> None:
     """Scan the local machine for AI sessions and build the index."""
     jor_home = _jor_home()
-    connectors = [ClaudeCodeConnector(), CodexConnector()]
+    connectors = [ClaudeConnector(), CodexConnector()]
     counts = Scanner(connectors=connectors, jor_home=jor_home).run()
 
     if not counts:
@@ -56,11 +56,11 @@ def discover() -> None:
 
 @main.command(name="list")
 @click.option("--codex", is_flag=True, help="Show only Codex sessions")
-@click.option("--claude-code", "claude_code", is_flag=True, help="Show only Claude Code sessions")
+@click.option("--claude", "claude", is_flag=True, help="Show only Claude sessions")
 @click.option("--query", "-q", default=None, help="Search titles")
 @click.option("--limit", "-n", default=20, show_default=True, help="Max results")
 @click.option("--path", default=None, help="Filter by workspace path")
-def list_sessions(codex: bool, claude_code: bool, query: str | None, limit: int, path: str | None) -> None:
+def list_sessions(codex: bool, claude: bool, query: str | None, limit: int, path: str | None) -> None:
     """List indexed sessions."""
     jor_home = _jor_home()
     index = load_index(jor_home / "index.json")
@@ -68,8 +68,8 @@ def list_sessions(codex: bool, claude_code: bool, query: str | None, limit: int,
 
     if codex:
         sessions = [s for s in sessions if s.tool == "codex"]
-    elif claude_code:
-        sessions = [s for s in sessions if s.tool == "claude_code"]
+    elif claude:
+        sessions = [s for s in sessions if s.tool == "claude"]
     if query:
         q = query.lower()
         sessions = [s for s in sessions if q in s.title.lower()]
@@ -95,12 +95,12 @@ def list_sessions(codex: bool, claude_code: bool, query: str | None, limit: int,
 @main.command()
 @click.argument("session_id")
 @click.option("--codex", is_flag=True, help="Convert to Codex format")
-@click.option("--claude-code", "claude_code", is_flag=True, help="Convert to Claude Code format")
-def convert(session_id: str, codex: bool, claude_code: bool) -> None:
+@click.option("--claude", "claude", is_flag=True, help="Convert to Claude format")
+def convert(session_id: str, codex: bool, claude: bool) -> None:
     """Translate a session to the target tool's native format.
 
-    Defaults to the opposite tool (codex→claude-code, claude-code→codex).
-    Use --codex or --claude-code to specify explicitly.
+    Defaults to the opposite tool (codex→claude, claude→codex).
+    Use --codex or --claude to specify explicitly.
     """
     jor_home = _jor_home()
     index = load_index(jor_home / "index.json")
@@ -110,16 +110,16 @@ def convert(session_id: str, codex: bool, claude_code: bool) -> None:
         click.echo(f"Session '{session_id}' not found. Run `jor discover` first.", err=True)
         raise SystemExit(1)
 
-    if codex and claude_code:
-        click.echo("Cannot specify both --codex and --claude-code.", err=True)
+    if codex and claude:
+        click.echo("Cannot specify both --codex and --claude.", err=True)
         raise SystemExit(1)
 
     if codex:
         target = "codex"
-    elif claude_code:
-        target = "claude_code"
+    elif claude:
+        target = "claude"
     else:
-        target = "codex" if entry.tool == "claude_code" else "claude_code"
+        target = "codex" if entry.tool == "claude" else "claude"
 
     session_file = jor_home / "sessions" / f"{entry.id}.jsonl"
     messages = read_session(session_file)
@@ -148,11 +148,11 @@ def convert(session_id: str, codex: bool, claude_code: bool) -> None:
 @main.command(name="open")
 @click.argument("session_id")
 @click.option("--codex", is_flag=True, help="Open in Codex")
-@click.option("--claude-code", "claude_code", is_flag=True, help="Open in Claude Code")
-def open_session(session_id: str, codex: bool, claude_code: bool) -> None:
+@click.option("--claude", "claude", is_flag=True, help="Open in Claude")
+def open_session(session_id: str, codex: bool, claude: bool) -> None:
     """Convert a session and launch the target tool.
 
-    Defaults to the session's original tool. Use --codex or --claude-code to
+    Defaults to the session's original tool. Use --codex or --claude to
     open in a different tool.
     """
     jor_home = _jor_home()
@@ -163,14 +163,14 @@ def open_session(session_id: str, codex: bool, claude_code: bool) -> None:
         click.echo(f"Session '{session_id}' not found. Run `jor discover` first.", err=True)
         raise SystemExit(1)
 
-    if codex and claude_code:
-        click.echo("Cannot specify both --codex and --claude-code.", err=True)
+    if codex and claude:
+        click.echo("Cannot specify both --codex and --claude.", err=True)
         raise SystemExit(1)
 
     if codex:
         target = "codex"
-    elif claude_code:
-        target = "claude_code"
+    elif claude:
+        target = "claude"
     else:
         target = entry.tool
 

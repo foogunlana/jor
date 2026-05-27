@@ -92,7 +92,7 @@ def test_jor_message_round_trip() -> None:
         tool_calls=[tc],
         model="claude-sonnet-4-6",
         provider="anthropic",
-        source_tool="claude_code",
+        source_tool="claude",
         source_id="orig-abc",
         metadata={"extra": "data"},
     )

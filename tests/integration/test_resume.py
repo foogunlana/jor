@@ -30,7 +30,7 @@ pytestmark = pytest.mark.skipif(
 
 
 def _resume_claude_interactive(session_id: str, cwd: str, timeout: int = 10) -> str:
-    """Resume a Claude Code session with a fake TTY and capture rendered output.
+    """Resume a Claude session with a fake TTY and capture rendered output.
 
     Returns the raw terminal output with ANSI codes stripped, so you can
     check whether conversation history was rendered.
@@ -48,7 +48,7 @@ def _resume_claude_interactive(session_id: str, cwd: str, timeout: int = 10) -> 
 
 
 def _resume_claude_with_prompt(session_id: str, prompt: str, cwd: str, timeout: int = 30) -> str:
-    """Resume a Claude Code session non-interactively with a prompt."""
+    """Resume a Claude session non-interactively with a prompt."""
     result = subprocess.run(
         ["claude", "--resume", session_id, "-p", prompt],
         capture_output=True, text=True, timeout=timeout, cwd=cwd,
@@ -66,7 +66,7 @@ def _resume_codex_with_prompt(session_id: str, prompt: str, cwd: str, timeout: i
 
 
 def _create_synthetic_cc_session(project_dir: Path, messages: list[dict]) -> str:
-    """Write a synthetic Claude Code session file. Returns session_id."""
+    """Write a synthetic Claude session file. Returns session_id."""
     sid = str(uuid.uuid4())
     path = project_dir / f"{sid}.jsonl"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -91,8 +91,8 @@ def _create_synthetic_cc_session(project_dir: Path, messages: list[dict]) -> str
     return sid
 
 
-class TestClaudeCodeResume:
-    """Test that converted sessions resume in Claude Code with visible history."""
+class TestClaudeResume:
+    """Test that converted sessions resume in Claude with visible history."""
 
     @pytest.fixture
     def project_dir(self) -> Path:
@@ -225,9 +225,9 @@ class TestJorConvertResume:
     """Test end-to-end: jor convert → resume in target tool."""
 
     def test_claude_to_codex_preserves_context(self) -> None:
-        """Convert a Claude Code session to Codex and verify context survives."""
+        """Convert a Claude session to Codex and verify context survives."""
         pytest.skip("Requires real indexed session — run manually")
 
     def test_codex_to_claude_preserves_context(self) -> None:
-        """Convert a Codex session to Claude Code and verify context survives."""
+        """Convert a Codex session to Claude and verify context survives."""
         pytest.skip("Requires real indexed session — run manually")

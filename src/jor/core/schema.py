@@ -31,7 +31,7 @@ class ToolResult(BaseModel):
 class JorMessage(BaseModel):
     """One message in a jor session.
 
-    Every message from every tool (Claude Code, Codex, etc.) is normalized
+    Every message from every tool (Claude, Codex, etc.) is normalized
     into this format. The source_tool and source_id fields track where the
     message originally came from.
     """

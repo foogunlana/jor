@@ -1,7 +1,7 @@
 """Scanner — runs all connectors and builds the session index.
 
 The scanner is the orchestrator for `jor discover`. It iterates over
-registered connectors (Claude Code, Codex, etc.), asks each to scan
+registered connectors (Claude, Codex, etc.), asks each to scan
 for sessions, and upserts the results into the shared index.
 """
 

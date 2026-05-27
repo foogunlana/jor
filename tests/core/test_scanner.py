@@ -51,8 +51,8 @@ def test_scanner_runs_detected_connectors(jor_home: Path) -> None:
 def test_scanner_updates_index(jor_home: Path) -> None:
     c = MagicMock()
     c.detect.return_value = True
-    c.scan.return_value = [_make_entry("claude_code", 1), _make_entry("claude_code", 2)]
-    c.name.return_value = "claude_code"
+    c.scan.return_value = [_make_entry("claude", 1), _make_entry("claude", 2)]
+    c.name.return_value = "claude"
 
     Scanner(connectors=[c], jor_home=jor_home).run()
 
@@ -61,11 +61,11 @@ def test_scanner_updates_index(jor_home: Path) -> None:
 
 
 def test_scanner_upserts_on_rescan(jor_home: Path) -> None:
-    entry = _make_entry("claude_code", 1)
+    entry = _make_entry("claude", 1)
     c = MagicMock()
     c.detect.return_value = True
     c.scan.return_value = [entry]
-    c.name.return_value = "claude_code"
+    c.name.return_value = "claude"
 
     Scanner(connectors=[c], jor_home=jor_home).run()
     Scanner(connectors=[c], jor_home=jor_home).run()

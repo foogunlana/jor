@@ -1,6 +1,6 @@
 """Base class for tool connectors.
 
-Each tool connector (Claude Code, Codex, etc.) inherits from BaseConnector
+Each tool connector (Claude, Codex, etc.) inherits from BaseConnector
 and provides:
 
 Reading (discover):

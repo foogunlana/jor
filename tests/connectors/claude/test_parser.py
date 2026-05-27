@@ -1,4 +1,4 @@
-"""Unit tests for Claude Code connector parsing methods."""
+"""Unit tests for Claude connector parsing methods."""
 
 from __future__ import annotations
 
@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from jor.connectors.claude_code.connector import ClaudeCodeConnector
+from jor.connectors.claude.connector import ClaudeConnector
 from jor.core.schema import JorMessage
 
-_connector = ClaudeCodeConnector(claude_home=Path("/fake"))
+_connector = ClaudeConnector(claude_home=Path("/fake"))
 extract_metadata = _connector.extract_metadata
 from_record = _connector.from_record
 
@@ -89,7 +89,7 @@ def test_parse_user_message():
     assert isinstance(result, JorMessage)
     assert result.role == "user"
     assert result.content == "hello"
-    assert result.source_tool == "claude_code"
+    assert result.source_tool == "claude"
 
 
 def test_parse_user_message_list_content():

@@ -19,7 +19,7 @@ from jor.core.index import IndexEntry, SessionIndex
 
 def _entry(
     id: str = "abc12345-0000-0000-0000-000000000000",
-    tool: str = "claude_code",
+    tool: str = "claude",
     title: str = "Test session",
     project: str = "/home/user/project",
     started_at: str = "2026-04-01T10:00:00Z",
@@ -48,14 +48,14 @@ def test_discover_prints_found_sessions(tmp_path: Path) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         with patch("jor.cli.Scanner") as MockScanner, \
-             patch("jor.cli.ClaudeCodeConnector"), \
+             patch("jor.cli.ClaudeConnector"), \
              patch("jor.cli.CodexConnector"):
-            MockScanner.return_value.run.return_value = {"claude_code": 3, "codex": 1}
+            MockScanner.return_value.run.return_value = {"claude": 3, "codex": 1}
             result = runner.invoke(main, ["discover"])
 
     assert result.exit_code == 0
     assert "Found 4 sessions" in result.output
-    assert "3 claude_code" in result.output
+    assert "3 claude" in result.output
     assert "1 codex" in result.output
 
 
@@ -63,7 +63,7 @@ def test_discover_no_sessions_found(tmp_path: Path) -> None:
     runner = CliRunner()
     with runner.isolated_filesystem(temp_dir=tmp_path):
         with patch("jor.cli.Scanner") as MockScanner, \
-             patch("jor.cli.ClaudeCodeConnector"), \
+             patch("jor.cli.ClaudeConnector"), \
              patch("jor.cli.CodexConnector"):
             MockScanner.return_value.run.return_value = {}
             result = runner.invoke(main, ["discover"])
@@ -94,7 +94,7 @@ def test_list_prints_table_with_columns(tmp_path: Path) -> None:
     assert "Title" in result.output
     # data row
     assert "abc12345" in result.output
-    assert "claude_code" in result.output
+    assert "claude" in result.output
     assert "project" in result.output  # basename of /home/user/project
     assert "Test session" in result.output
 
@@ -112,7 +112,7 @@ def test_list_empty_index_prints_no_sessions(tmp_path: Path) -> None:
 def test_list_filter_by_tool(tmp_path: Path) -> None:
     runner = CliRunner()
     index = SessionIndex(sessions=[
-        _entry(id="aaa00000-0000-0000-0000-000000000000", tool="claude_code"),
+        _entry(id="aaa00000-0000-0000-0000-000000000000", tool="claude"),
         _entry(id="bbb00000-0000-0000-0000-000000000000", tool="codex"),
     ])
     with patch("jor.cli.load_index", return_value=index):
@@ -185,9 +185,9 @@ def test_list_filter_by_path(tmp_path: Path) -> None:
 
 
 def test_convert_default_converts_to_opposite_tool(tmp_path: Path) -> None:
-    """A claude_code session with no flags should convert to codex."""
+    """A claude session with no flags should convert to codex."""
     runner = CliRunner()
-    entry = _entry(tool="claude_code")
+    entry = _entry(tool="claude")
     index = SessionIndex(sessions=[entry])
     messages = [MagicMock()]
     mock_connector = MagicMock()
@@ -206,7 +206,7 @@ def test_convert_default_converts_to_opposite_tool(tmp_path: Path) -> None:
 def test_convert_registers_copy_with_parent_id(tmp_path: Path) -> None:
     """Convert should register the new session in the index with parent_id."""
     runner = CliRunner()
-    entry = _entry(tool="claude_code")
+    entry = _entry(tool="claude")
     index = SessionIndex(sessions=[entry])
     messages = [MagicMock()]
     mock_connector = MagicMock()

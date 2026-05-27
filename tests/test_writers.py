@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from jor.core.schema import JorMessage, ToolCall, ToolResult
-from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
+from jor.connectors.claude.connector import ClaudeConnector as ClaudeWriter
 from jor.connectors.codex.connector import CodexConnector as CodexWriter
 
 
@@ -50,20 +50,20 @@ def simple_messages() -> list[JorMessage]:
     ]
 
 
-# --- ClaudeCodeWriter ---
+# --- ClaudeWriter ---
 
-class TestClaudeCodeWriter:
+class TestClaudeWriter:
     def test_write_creates_file(self, tmp_path: Path, simple_messages: list[JorMessage]) -> None:
-        _, out = ClaudeCodeWriter().write(simple_messages, tmp_path / "test-session.jsonl")
+        _, out = ClaudeWriter().write(simple_messages, tmp_path / "test-session.jsonl")
         assert out.exists()
 
     def test_write_valid_jsonl(self, tmp_path: Path, simple_messages: list[JorMessage]) -> None:
-        _, out = ClaudeCodeWriter().write(simple_messages, tmp_path / "test-session.jsonl")
+        _, out = ClaudeWriter().write(simple_messages, tmp_path / "test-session.jsonl")
         lines = [json.loads(l) for l in out.read_text().splitlines() if l.strip()]
         assert len(lines) == 4
 
     def test_user_message_format(self, tmp_path: Path, simple_messages: list[JorMessage]) -> None:
-        _, out = ClaudeCodeWriter().write(simple_messages, tmp_path / "sess.jsonl")
+        _, out = ClaudeWriter().write(simple_messages, tmp_path / "sess.jsonl")
         lines = [json.loads(l) for l in out.read_text().splitlines() if l.strip()]
         user = lines[0]
         assert user["type"] == "user"
@@ -71,7 +71,7 @@ class TestClaudeCodeWriter:
         assert user["message"]["content"] == "Refactor the auth module"
 
     def test_assistant_with_tool_calls(self, tmp_path: Path, simple_messages: list[JorMessage]) -> None:
-        _, out = ClaudeCodeWriter().write(simple_messages, tmp_path / "sess.jsonl")
+        _, out = ClaudeWriter().write(simple_messages, tmp_path / "sess.jsonl")
         lines = [json.loads(l) for l in out.read_text().splitlines() if l.strip()]
         asst = lines[1]
         assert asst["type"] == "assistant"
@@ -83,7 +83,7 @@ class TestClaudeCodeWriter:
         assert tool_blocks[0]["id"] == "tc-1"
 
     def test_tool_result_format(self, tmp_path: Path, simple_messages: list[JorMessage]) -> None:
-        _, out = ClaudeCodeWriter().write(simple_messages, tmp_path / "sess.jsonl")
+        _, out = ClaudeWriter().write(simple_messages, tmp_path / "sess.jsonl")
         lines = [json.loads(l) for l in out.read_text().splitlines() if l.strip()]
         tr = lines[2]
         assert tr["type"] == "user"
@@ -92,7 +92,7 @@ class TestClaudeCodeWriter:
         assert blocks[0]["tool_use_id"] == "tc-1"
 
     def test_resume_command(self, tmp_path: Path, simple_messages: list[JorMessage]) -> None:
-        writer = ClaudeCodeWriter()
+        writer = ClaudeWriter()
         _, out = writer.write(simple_messages, tmp_path / "my-session.jsonl")
         cmd = writer.resume_command(out)
         assert "claude" in cmd
