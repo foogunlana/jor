@@ -199,6 +199,62 @@ def test_output_is_valid_jsonl(tmp_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Structural validation: output matches real Codex session structure
+# ---------------------------------------------------------------------------
+
+
+def test_output_matches_real_codex_structure(tmp_path: Path) -> None:
+    """Output must have the same record type distribution as a real Codex session.
+
+    Real sessions have: session_meta, event_msg/user_message,
+    event_msg/agent_message, response_item/message, and optionally
+    response_item/function_call + function_call_output.
+
+    The TUI uses event_msg records for display. Without them, no
+    conversation history appears in the interactive UI.
+    """
+    from jor.connectors.codex.connector import CodexConnector as CodexWriter
+
+    tc = ToolCall(id="tc1", name="bash", input={"cmd": "echo hi"})
+    tr = ToolResult(tool_call_id="tc1", content="hi")
+    messages = [
+        JorMessage(id="m1", role="user", content="say hi"),
+        JorMessage(id="m2", role="assistant", content="running bash", tool_calls=[tc]),
+        JorMessage(id="m3", role="tool_result", content="hi", tool_result=tr),
+        JorMessage(id="m4", role="assistant", content="done"),
+    ]
+    _, out_path = CodexWriter().write(messages, tmp_path)
+    records = _parse_records(out_path)
+
+    # Count record types
+    types = {}
+    for rec in records:
+        t = rec["type"]
+        pt = rec["payload"].get("type", "")
+        key = f"{t}/{pt}" if pt else t
+        types[key] = types.get(key, 0) + 1
+
+    # Must have session_meta (payload has no "type" subfield)
+    session_meta_count = sum(1 for r in records if r["type"] == "session_meta")
+    assert session_meta_count == 1
+
+    # Must have event_msg records for TUI display
+    assert types.get("event_msg/user_message", 0) >= 1, "Missing event_msg/user_message — TUI won't show user turns"
+    assert types.get("event_msg/agent_message", 0) >= 1, "Missing event_msg/agent_message — TUI won't show assistant turns"
+
+    # Must have response_item records for model context
+    assert types.get("response_item/message", 0) >= 1, "Missing response_item/message — model won't have context"
+
+    # Event counts should match message counts
+    assert types["event_msg/user_message"] == 1  # 1 user message
+    assert types["event_msg/agent_message"] == 2  # 2 assistant messages (one has tool_calls with content)
+
+    # Tool calls should be present
+    assert types.get("response_item/function_call", 0) == 1
+    assert types.get("response_item/function_call_output", 0) == 1
+
+
 def test_write_session_inserts_sqlite_row(tmp_path: Path) -> None:
     from jor.connectors.codex.connector import CodexConnector as CodexWriter
 

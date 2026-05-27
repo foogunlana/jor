@@ -157,10 +157,16 @@ class TestClaudeCodeResume:
 
 
 class TestCodexResume:
-    """Test that converted sessions resume in Codex with context."""
+    """Test that converted sessions resume in Codex with context.
 
-    def test_synthetic_codex_session_has_context(self, tmp_path: Path) -> None:
-        """A synthetic Codex session should preserve context on resume."""
+    Codex TUI can't be captured programmatically (Rust TUI with
+    char-by-char rendering). Instead we validate:
+    1. File structure matches real Codex sessions (unit test)
+    2. Model context via codex exec resume (integration test)
+    """
+
+    def test_synthetic_codex_session_structure(self, tmp_path: Path) -> None:
+        """Output file must have event_msg records for TUI history display."""
         from jor.connectors.codex.connector import CodexConnector
         from jor.core.schema import JorMessage
 
@@ -171,15 +177,48 @@ class TestCodexResume:
         ]
         sid, cmd, path = writer.write_session(messages, str(Path.cwd()))
 
-        # Verify the file has no empty assistant messages
         records = [json.loads(l) for l in path.read_text().splitlines() if l]
-        msg_records = [r for r in records if r["type"] == "response_item"]
-        for rec in msg_records:
+
+        # Must have event_msg records (TUI uses these for display)
+        user_events = [r for r in records if r["type"] == "event_msg" and r["payload"].get("type") == "user_message"]
+        agent_events = [r for r in records if r["type"] == "event_msg" and r["payload"].get("type") == "agent_message"]
+        assert len(user_events) == 1, "Missing event_msg/user_message"
+        assert len(agent_events) == 1, "Missing event_msg/agent_message"
+        assert user_events[0]["payload"]["message"] == "My secret word is MANGO"
+        assert "MANGO" in agent_events[0]["payload"]["message"]
+
+        # Must also have response_item records (model uses these for context)
+        resp_items = [r for r in records if r["type"] == "response_item"]
+        assert len(resp_items) >= 2
+
+        # No empty assistant messages
+        for rec in resp_items:
             payload = rec["payload"]
             if payload.get("type") == "message" and payload.get("role") == "assistant":
                 content_blocks = payload.get("content", [])
                 texts = [b.get("text", "") for b in content_blocks]
                 assert any(t.strip() for t in texts), "Assistant message has empty content"
+
+    def test_codex_exec_resume_preserves_context(self, tmp_path: Path) -> None:
+        """codex exec resume should have conversation context."""
+        from jor.connectors.codex.connector import CodexConnector
+        from jor.core.schema import JorMessage
+
+        # Write to real codex home so codex can find it
+        writer = CodexConnector()
+        messages = [
+            JorMessage(id="m1", role="user", content="My secret word is PAPAYA"),
+            JorMessage(id="m2", role="assistant", content="Got it, your secret word is PAPAYA."),
+        ]
+        sid, cmd, path = writer.write_session(messages, str(Path.cwd()))
+
+        try:
+            response = _resume_codex_with_prompt(
+                sid, "What is my secret word? Reply with just the word.", str(Path.cwd()),
+            )
+            assert "PAPAYA" in response.upper(), f"Codex lost context: {response}"
+        finally:
+            path.unlink(missing_ok=True)
 
 
 class TestJorConvertResume:
