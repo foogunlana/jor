@@ -32,6 +32,7 @@ class IndexEntry(BaseModel):
     project: str
     started_at: str
     message_count: int
+    parent_id: Optional[str] = None
     ended_at: Optional[str] = None
     model: Optional[str] = None
     provider: Optional[str] = None
