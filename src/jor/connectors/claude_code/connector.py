@@ -135,6 +135,9 @@ class ClaudeCodeConnector(BaseConnector):
                     for b in content_blocks
                     if isinstance(b, dict) and b.get("type") == "tool_use"
                 ] or None
+            # Skip empty streaming/partial records
+            if not text.strip() and not tool_calls:
+                return None
             return JorMessage(
                 id=str(uuid.uuid4()),
                 role="assistant",

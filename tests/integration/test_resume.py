@@ -156,6 +156,32 @@ class TestClaudeCodeResume:
             (project_dir / f"{sid}.jsonl").unlink(missing_ok=True)
 
 
+class TestCodexResume:
+    """Test that converted sessions resume in Codex with context."""
+
+    def test_synthetic_codex_session_has_context(self, tmp_path: Path) -> None:
+        """A synthetic Codex session should preserve context on resume."""
+        from jor.connectors.codex.connector import CodexConnector
+        from jor.core.schema import JorMessage
+
+        writer = CodexConnector(codex_home=tmp_path)
+        messages = [
+            JorMessage(id="m1", role="user", content="My secret word is MANGO"),
+            JorMessage(id="m2", role="assistant", content="Got it, your secret word is MANGO."),
+        ]
+        sid, cmd, path = writer.write_session(messages, str(Path.cwd()))
+
+        # Verify the file has no empty assistant messages
+        records = [json.loads(l) for l in path.read_text().splitlines() if l]
+        msg_records = [r for r in records if r["type"] == "response_item"]
+        for rec in msg_records:
+            payload = rec["payload"]
+            if payload.get("type") == "message" and payload.get("role") == "assistant":
+                content_blocks = payload.get("content", [])
+                texts = [b.get("text", "") for b in content_blocks]
+                assert any(t.strip() for t in texts), "Assistant message has empty content"
+
+
 class TestJorConvertResume:
     """Test end-to-end: jor convert → resume in target tool."""
 
