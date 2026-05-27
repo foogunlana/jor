@@ -100,7 +100,8 @@ class BaseConnector(ABC):
 
     # --- Launching: resume or write + launch ---
 
-    def launch(self, messages: list[JorMessage], session_id: str | None = None, project: str | None = None) -> None:
+    def launch(self, messages: list[JorMessage], session_id: str | None = None, project: str | None = None) -> tuple[str, str | None]:
+        """Write session + launch tool. Returns (resume_command, project_dir)."""
         if session_id:
             cmd = self.RESUME_CMD.format(session_id=session_id)
         else:
@@ -108,6 +109,7 @@ class BaseConnector(ABC):
 
         cwd = project if project and Path(project).is_dir() else None
         subprocess.run(cmd, shell=True, cwd=cwd)
+        return cmd, cwd
 
     # --- Internal ---
 

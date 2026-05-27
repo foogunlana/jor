@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
+import uuid
 from pathlib import Path
 
 import click
 
 from jor.connectors.claude_code.connector import ClaudeCodeConnector
 from jor.connectors.codex.connector import CodexConnector
-from jor.core.index import load_index
+from jor.core.index import IndexEntry, load_index, save_index, upsert_session
 from jor.core.reader import read_session
 from jor.core.scanner import Scanner
 
@@ -82,11 +83,13 @@ def list_sessions(codex: bool, claude_code: bool, query: str | None, limit: int,
         click.echo("No sessions found.")
         return
 
-    click.echo(f"{'ID':<10} {'Tool':<12} {'Date':<12} {'Msgs':>5}  Title")
-    click.echo("-" * 60)
+    click.echo(f"{'ID':<10} {'Tool':<12} {'Date':<12} {'Msgs':>5}  {'Project':<20} {'Parent':<10} Title")
+    click.echo("-" * 90)
     for s in sessions:
         date = s.started_at[:10] if s.started_at else "unknown"
-        click.echo(f"{s.id[:8]:<10} {s.tool:<12} {date:<12} {s.message_count:>5}  {s.title[:40]}")
+        project = Path(s.project).name if s.project else ""
+        parent = s.parent_id[:8] if s.parent_id else ""
+        click.echo(f"{s.id[:8]:<10} {s.tool:<12} {date:<12} {s.message_count:>5}  {project:<20} {parent:<10} {s.title[:40]}")
 
 
 @main.command()
@@ -122,7 +125,22 @@ def convert(session_id: str, codex: bool, claude_code: bool) -> None:
     messages = read_session(session_file)
 
     connector = _connector_for(target)
-    _, cmd, out = connector.write_session(messages, entry.project)
+    new_id, cmd, out = connector.write_session(messages, entry.project)
+
+    new_entry = IndexEntry(
+        id=str(uuid.uuid5(uuid.NAMESPACE_URL, str(out))),
+        tool=target,
+        source_id=new_id,
+        source_path=str(out),
+        title=entry.title,
+        project=entry.project,
+        started_at=entry.started_at,
+        message_count=entry.message_count,
+        parent_id=entry.id,
+    )
+    upsert_session(index, new_entry)
+    save_index(index, jor_home / "index.json")
+
     click.echo(f"Session written to {out}")
     click.echo(f"\nTo resume, run:\n  {cmd}")
 
@@ -163,4 +181,10 @@ def open_session(session_id: str, codex: bool, claude_code: bool) -> None:
     source_id = entry.source_id if same_tool else None
 
     connector = _connector_for(target)
-    connector.launch(messages, session_id=source_id, project=entry.project)
+    cmd, cwd = connector.launch(messages, session_id=source_id, project=entry.project)
+
+    # After session exits, print resume command with cd if needed
+    if cwd and str(Path.cwd()) != cwd:
+        click.echo(f"\nTo resume, run:\n  cd {cwd} && {cmd}")
+    else:
+        click.echo(f"\nTo resume, run:\n  {cmd}")

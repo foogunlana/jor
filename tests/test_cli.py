@@ -24,6 +24,7 @@ def _entry(
     project: str = "/home/user/project",
     started_at: str = "2026-04-01T10:00:00Z",
     message_count: int = 5,
+    parent_id: str | None = None,
 ) -> IndexEntry:
     return IndexEntry(
         id=id,
@@ -34,6 +35,7 @@ def _entry(
         project=project,
         started_at=started_at,
         message_count=message_count,
+        parent_id=parent_id,
     )
 
 
@@ -87,10 +89,13 @@ def test_list_prints_table_with_columns(tmp_path: Path) -> None:
     assert "Tool" in result.output
     assert "Date" in result.output
     assert "Msgs" in result.output
+    assert "Project" in result.output
+    assert "Parent" in result.output
     assert "Title" in result.output
     # data row
     assert "abc12345" in result.output
     assert "claude_code" in result.output
+    assert "project" in result.output  # basename of /home/user/project
     assert "Test session" in result.output
 
 
@@ -147,6 +152,19 @@ def test_list_limit_restricts_results(tmp_path: Path) -> None:
     assert len(lines) == 3
 
 
+def test_list_shows_parent_id_for_copies(tmp_path: Path) -> None:
+    runner = CliRunner()
+    index = SessionIndex(sessions=[
+        _entry(id="parent00-0000-0000-0000-000000000000", title="Original"),
+        _entry(id="child000-0000-0000-0000-000000000000", title="Copy", parent_id="parent00-0000-0000-0000-000000000000"),
+    ])
+    with patch("jor.cli.load_index", return_value=index):
+        result = runner.invoke(main, ["list"])
+
+    assert result.exit_code == 0
+    assert "parent00" in result.output  # parent_id shown truncated
+
+
 def test_list_filter_by_path(tmp_path: Path) -> None:
     runner = CliRunner()
     index = SessionIndex(sessions=[
@@ -177,11 +195,35 @@ def test_convert_default_converts_to_opposite_tool(tmp_path: Path) -> None:
 
     with patch("jor.cli.load_index", return_value=index), \
          patch("jor.cli.read_session", return_value=messages), \
-         patch("jor.cli._connector_for", return_value=mock_connector):
+         patch("jor.cli._connector_for", return_value=mock_connector), \
+         patch("jor.cli.save_index"):
         result = runner.invoke(main, ["convert", "abc12345"])
 
     assert result.exit_code == 0
     mock_connector.write_session.assert_called_once()
+
+
+def test_convert_registers_copy_with_parent_id(tmp_path: Path) -> None:
+    """Convert should register the new session in the index with parent_id."""
+    runner = CliRunner()
+    entry = _entry(tool="claude_code")
+    index = SessionIndex(sessions=[entry])
+    messages = [MagicMock()]
+    mock_connector = MagicMock()
+    mock_connector.write_session.return_value = ("xyz", "codex resume xyz", tmp_path / "out.jsonl")
+
+    with patch("jor.cli.load_index", return_value=index), \
+         patch("jor.cli.read_session", return_value=messages), \
+         patch("jor.cli._connector_for", return_value=mock_connector), \
+         patch("jor.cli.save_index") as mock_save:
+        result = runner.invoke(main, ["convert", "abc12345"])
+
+    assert result.exit_code == 0
+    mock_save.assert_called_once()
+    # The new entry should be in the index with parent_id set
+    new_entries = [s for s in index.sessions if s.parent_id == entry.id]
+    assert len(new_entries) == 1
+    assert new_entries[0].tool == "codex"
 
 
 def test_convert_codex_flag_writes_codex_format(tmp_path: Path) -> None:
@@ -194,7 +236,8 @@ def test_convert_codex_flag_writes_codex_format(tmp_path: Path) -> None:
 
     with patch("jor.cli.load_index", return_value=index), \
          patch("jor.cli.read_session", return_value=messages), \
-         patch("jor.cli._connector_for", return_value=mock_connector):
+         patch("jor.cli._connector_for", return_value=mock_connector), \
+         patch("jor.cli.save_index"):
         result = runner.invoke(main, ["convert", "abc12345", "--codex"])
 
     assert result.exit_code == 0
@@ -222,7 +265,8 @@ def test_convert_prints_resume_command(tmp_path: Path) -> None:
 
     with patch("jor.cli.load_index", return_value=index), \
          patch("jor.cli.read_session", return_value=messages), \
-         patch("jor.cli._connector_for", return_value=mock_connector):
+         patch("jor.cli._connector_for", return_value=mock_connector), \
+         patch("jor.cli.save_index"):
         result = runner.invoke(main, ["convert", "abc12345"])
 
     assert "claude --resume sid" in result.output
@@ -239,6 +283,7 @@ def test_open_calls_launcher(tmp_path: Path) -> None:
     index = SessionIndex(sessions=[entry])
     messages = [MagicMock()]
     mock_connector = MagicMock()
+    mock_connector.launch.return_value = ("claude --resume abc", None)
 
     with patch("jor.cli.load_index", return_value=index), \
          patch("jor.cli.read_session", return_value=messages), \
@@ -255,6 +300,7 @@ def test_open_codex_flag_uses_codex_launcher(tmp_path: Path) -> None:
     index = SessionIndex(sessions=[entry])
     messages = [MagicMock()]
     mock_connector = MagicMock()
+    mock_connector.launch.return_value = ("codex resume abc", None)
 
     with patch("jor.cli.load_index", return_value=index), \
          patch("jor.cli.read_session", return_value=messages), \
