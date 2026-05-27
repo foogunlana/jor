@@ -81,6 +81,32 @@ class ClaudeCodeConnector(BaseConnector):
         if msg_type == "user":
             content = msg.get("content", "")
             if isinstance(content, list):
+                # Check if this is actually a tool_result wrapped as user
+                tool_results = [b for b in content if isinstance(b, dict) and b.get("type") == "tool_result"]
+                if tool_results:
+                    results = []
+                    for block in tool_results:
+                        tool_call_id = block.get("tool_use_id", "")
+                        result_content = block.get("content", "")
+                        if isinstance(result_content, list):
+                            result_content = " ".join(
+                                b.get("text", "") for b in result_content if isinstance(b, dict)
+                            )
+                        results.append(JorMessage(
+                            id=str(uuid.uuid4()),
+                            role="tool_result",
+                            content=result_content,
+                            tool_result=ToolResult(
+                                tool_call_id=tool_call_id,
+                                content=result_content,
+                                is_error=block.get("is_error", False),
+                            ),
+                            timestamp=timestamp,
+                            metadata=metadata or None,
+                            source_tool="claude_code",
+                            source_id=session_id,
+                        ))
+                    return results
                 content = " ".join(
                     b.get("text", "") for b in content if isinstance(b, dict)
                 )
@@ -128,6 +154,10 @@ class ClaudeCodeConnector(BaseConnector):
                     if isinstance(block, dict) and block.get("type") == "tool_result":
                         tool_call_id = block.get("tool_use_id", "")
                         result_content = block.get("content", "")
+                        if isinstance(result_content, list):
+                            result_content = " ".join(
+                                b.get("text", "") for b in result_content if isinstance(b, dict)
+                            )
                         results.append(JorMessage(
                             id=str(uuid.uuid4()),
                             role="tool_result",
@@ -171,19 +201,29 @@ class ClaudeCodeConnector(BaseConnector):
                         "name": tc.name,
                         "input": tc.input,
                     })
-            return {**base, "type": "assistant", "message": {"role": "assistant", "content": content_blocks}}
+            stop_reason = "tool_use" if msg.tool_calls else "end_turn"
+            return {**base, "type": "assistant", "message": {
+                "id": f"msg_{uuid.uuid4().hex[:24]}",
+                "type": "message",
+                "role": "assistant",
+                "model": msg.model or "claude-sonnet-4-6",
+                "content": content_blocks,
+                "stop_reason": stop_reason,
+                "stop_sequence": None,
+            }}
 
         elif msg.role == "tool_result":
             tool_call_id = msg.tool_result.tool_call_id if msg.tool_result else ""
             return {
                 **base,
-                "type": "tool_result",
+                "type": "user",
                 "message": {
-                    "role": "tool_result",
+                    "role": "user",
                     "content": [{
                         "type": "tool_result",
                         "tool_use_id": tool_call_id,
                         "content": msg.content,
+                        "is_error": msg.tool_result.is_error if msg.tool_result else False,
                     }],
                 },
             }
@@ -202,6 +242,7 @@ class ClaudeCodeConnector(BaseConnector):
             for rec in items:
                 rec["uuid"] = str(uuid.uuid4())
                 rec["parentUuid"] = prev_uuid
+                rec["isSidechain"] = False
                 prev_uuid = rec["uuid"]
                 records.append(rec)
         path.write_text("\n".join(json.dumps(r) for r in records) + "\n")

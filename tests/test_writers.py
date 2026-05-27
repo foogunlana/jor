@@ -86,7 +86,7 @@ class TestClaudeCodeWriter:
         _, out = ClaudeCodeWriter().write(simple_messages, tmp_path / "sess.jsonl")
         lines = [json.loads(l) for l in out.read_text().splitlines() if l.strip()]
         tr = lines[2]
-        assert tr["type"] == "tool_result"
+        assert tr["type"] == "user"
         blocks = tr["message"]["content"]
         assert blocks[0]["type"] == "tool_result"
         assert blocks[0]["tool_use_id"] == "tc-1"

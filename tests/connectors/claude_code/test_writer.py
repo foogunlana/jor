@@ -105,7 +105,8 @@ def test_assistant_message_maps_to_type_assistant(tmp_path: Path) -> None:
     assert rec["message"]["role"] == "assistant"
 
 
-def test_tool_result_message_maps_to_type_tool_result(tmp_path: Path) -> None:
+def test_tool_result_message_maps_to_type_user(tmp_path: Path) -> None:
+    """Tool results are sent as type=user in Claude Code's native format."""
     from jor.connectors.claude_code.connector import ClaudeCodeConnector as ClaudeCodeWriter
 
     msgs = [
@@ -118,7 +119,8 @@ def test_tool_result_message_maps_to_type_tool_result(tmp_path: Path) -> None:
     ]
     ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
     rec = json.loads((tmp_path / "out.jsonl").read_text().splitlines()[0])
-    assert rec["type"] == "tool_result"
+    assert rec["type"] == "user"
+    assert rec["message"]["role"] == "user"
 
 
 # ---------------------------------------------------------------------------
@@ -168,6 +170,7 @@ def test_tool_result_content_block_structure(tmp_path: Path) -> None:
     ]
     ClaudeCodeWriter().write(msgs, tmp_path / "out.jsonl")
     rec = json.loads((tmp_path / "out.jsonl").read_text().splitlines()[0])
+    assert rec["type"] == "user"
     content = rec["message"]["content"]
     assert isinstance(content, list)
     result_blocks = [b for b in content if b.get("type") == "tool_result"]
