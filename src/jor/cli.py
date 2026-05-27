@@ -181,10 +181,5 @@ def open_session(session_id: str, codex: bool, claude: bool) -> None:
     source_id = entry.source_id if same_tool else None
 
     connector = _connector_for(target)
-    cmd, cwd = connector.launch(messages, session_id=source_id, project=entry.project)
-
-    # After session exits, print resume command with cd if needed
-    if cwd and str(Path.cwd()) != cwd:
-        click.echo(f"\nTo resume, run:\n  cd {cwd} && {cmd}")
-    else:
-        click.echo(f"\nTo resume, run:\n  {cmd}")
+    # exec replaces this process — cd's to project dir first
+    connector.launch(messages, session_id=source_id, project=entry.project)
