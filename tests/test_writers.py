@@ -116,9 +116,10 @@ class TestCodexWriter:
     def test_user_message_format(self, tmp_path: Path, simple_messages: list[JorMessage]) -> None:
         _, out = CodexWriter().write(simple_messages, tmp_path)
         lines = [json.loads(l) for l in out.read_text().splitlines() if l.strip()]
-        user_rec = lines[1]  # after session_meta
-        assert user_rec["type"] == "response_item"
-        assert user_rec["payload"]["role"] == "user"
+        # Find user response_item (event_msg comes first now)
+        user_recs = [r for r in lines if r["type"] == "response_item" and r["payload"].get("role") == "user"]
+        assert len(user_recs) >= 1
+        assert user_recs[0]["payload"]["type"] == "message"
 
     def test_assistant_with_tool_calls(self, tmp_path: Path, simple_messages: list[JorMessage]) -> None:
         _, out = CodexWriter().write(simple_messages, tmp_path)

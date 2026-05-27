@@ -190,6 +190,22 @@ class CodexConnector(BaseConnector):
 
         records = [meta]
         for msg in messages:
+            msg_ts = msg.timestamp or ts
+
+            # Emit event_msg records for TUI history display
+            if msg.role == "user":
+                records.append(_envelope(msg_ts, {
+                    "type": "user_message",
+                    "message": msg.content,
+                    "images": [],
+                }, record_type="event_msg"))
+            elif msg.role == "assistant" and msg.content:
+                records.append(_envelope(msg_ts, {
+                    "type": "agent_message",
+                    "message": msg.content,
+                }, record_type="event_msg"))
+
+            # Emit response_item records for model context
             result = self.to_record(msg, session_id)
             if isinstance(result, list):
                 records.extend(result)

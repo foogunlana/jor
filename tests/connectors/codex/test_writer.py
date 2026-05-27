@@ -62,12 +62,10 @@ def test_user_message_wrapped_as_response_item(tmp_path: Path) -> None:
     messages = [JorMessage(id="m1", role="user", content="hello world")]
     _, out_path = CodexWriter().write(messages, tmp_path)
     records = _parse_records(out_path)
-    # Skip session_meta
-    msg_rec = records[1]
-    assert msg_rec["type"] == "response_item"
-    payload = msg_rec["payload"]
-    assert payload["type"] == "message"
-    assert payload["role"] == "user"
+    # Find the response_item for this user message (skip event_msg + session_meta)
+    resp_recs = [r for r in records if r["type"] == "response_item" and r["payload"].get("role") == "user"]
+    assert len(resp_recs) == 1
+    assert resp_recs[0]["payload"]["type"] == "message"
 
 
 def test_assistant_message_wrapped_as_response_item(tmp_path: Path) -> None:
@@ -76,9 +74,33 @@ def test_assistant_message_wrapped_as_response_item(tmp_path: Path) -> None:
     messages = [JorMessage(id="m1", role="assistant", content="I can help")]
     _, out_path = CodexWriter().write(messages, tmp_path)
     records = _parse_records(out_path)
-    payload = records[1]["payload"]
-    assert payload["type"] == "message"
-    assert payload["role"] == "assistant"
+    resp_recs = [r for r in records if r["type"] == "response_item" and r["payload"].get("role") == "assistant"]
+    assert len(resp_recs) == 1
+    assert resp_recs[0]["payload"]["type"] == "message"
+
+
+def test_user_message_has_event_msg(tmp_path: Path) -> None:
+    """User messages must emit event_msg/user_message for TUI display."""
+    from jor.connectors.codex.connector import CodexConnector as CodexWriter
+
+    messages = [JorMessage(id="m1", role="user", content="hello world")]
+    _, out_path = CodexWriter().write(messages, tmp_path)
+    records = _parse_records(out_path)
+    event_recs = [r for r in records if r["type"] == "event_msg" and r["payload"].get("type") == "user_message"]
+    assert len(event_recs) == 1
+    assert event_recs[0]["payload"]["message"] == "hello world"
+
+
+def test_assistant_message_has_event_msg(tmp_path: Path) -> None:
+    """Assistant messages must emit event_msg/agent_message for TUI display."""
+    from jor.connectors.codex.connector import CodexConnector as CodexWriter
+
+    messages = [JorMessage(id="m1", role="assistant", content="I can help")]
+    _, out_path = CodexWriter().write(messages, tmp_path)
+    records = _parse_records(out_path)
+    event_recs = [r for r in records if r["type"] == "event_msg" and r["payload"].get("type") == "agent_message"]
+    assert len(event_recs) == 1
+    assert event_recs[0]["payload"]["message"] == "I can help"
 
 
 def test_system_message_maps_to_developer_role(tmp_path: Path) -> None:
