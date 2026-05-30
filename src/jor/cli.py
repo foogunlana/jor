@@ -48,12 +48,21 @@ def _jor_home() -> Path:
     (home / "sessions").mkdir(exist_ok=True)
     if first_run:
         click.echo(
+            " ╦╔═╗╦═╗\n"
+            " ║║ ║╠╦╝\n"
+            "╚╝╚═╝╩╚═\n"
+            "\n"
+            "Welcome to jor! Transfer AI sessions between tools.\n"
+            "Start a conversation in Claude Code, continue it in Codex — or vice versa.\n"
+            "\n"
+            "  jor list                  discover and list sessions\n"
+            "  jor open <id>             resume a session\n"
+            "  jor open <id> --codex     open in a different tool\n"
+            "\n"
             "Note: when you exit a session opened with `jor open`, your shell\n"
             "stays in its original directory. You may need to cd to the project\n"
             "directory before using the tool's resume command.\n"
-            "\n"
-            "Upvote https://github.com/foogunlana/jor/issues/10 if you'd like\n"
-            "automatic shell integration.\n",
+            "Upvote https://github.com/foogunlana/jor/issues/10 for auto cd.\n",
             err=True,
         )
     return home
