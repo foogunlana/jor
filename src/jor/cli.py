@@ -48,9 +48,7 @@ def _jor_home() -> Path:
     (home / "sessions").mkdir(exist_ok=True)
     if first_run:
         click.echo(
-            " ╦╔═╗╦═╗\n"
-            " ║║ ║╠╦╝\n"
-            "╚╝╚═╝╩╚═\n"
+            "🐐 jor\n"
             "\n"
             "Welcome to jor! Transfer AI sessions between tools.\n"
             "Start a conversation in Claude Code, continue it in Codex — or vice versa.\n"
