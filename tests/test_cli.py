@@ -56,7 +56,7 @@ def test_list_prints_table_with_columns(tmp_path: Path) -> None:
     # header columns
     assert "ID" in result.output
     assert "Tool" in result.output
-    assert "Date" in result.output
+    assert "Modified" in result.output
     assert "Msgs" in result.output
     assert "Project" in result.output
     assert "Parent" in result.output

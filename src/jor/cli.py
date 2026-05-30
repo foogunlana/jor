@@ -105,26 +105,30 @@ def list_sessions(codex: bool, claude: bool, query: str | None, limit: int, path
     if path:
         sessions = [s for s in sessions if path in s.project]
 
-    sessions.sort(key=lambda s: s.started_at or "", reverse=True)
+    def _mtime(s):
+        p = Path(s.source_path)
+        return p.stat().st_mtime if p.exists() else 0
+
+    sessions.sort(key=_mtime, reverse=True)
     sessions = sessions[:limit]
 
     if not sessions:
         click.echo("No sessions found.")
         return
 
-    click.echo(f"{'ID':<10} {'Tool':<12} {'Date':<12} {'Modified':<12} {'Msgs':>5}  {'Project':<20} {'Parent':<10} Title")
-    click.echo("-" * 102)
+    from datetime import datetime, timezone
+
+    click.echo(f"{'ID':<10} {'Tool':<12} {'Modified':<12} {'Msgs':>5}  {'Project':<20} {'Parent':<10} Title")
+    click.echo("-" * 90)
     for s in sessions:
-        date = s.started_at[:10] if s.started_at else "unknown"
         source = Path(s.source_path)
         modified = ""
         if source.exists():
-            from datetime import datetime, timezone
             mtime = source.stat().st_mtime
             modified = datetime.fromtimestamp(mtime, tz=timezone.utc).strftime("%Y-%m-%d")
         project = Path(s.project).name if s.project else ""
         parent = s.parent_id[:8] if s.parent_id else ""
-        click.echo(f"{s.id[:8]:<10} {s.tool:<12} {date:<12} {modified:<12} {s.message_count:>5}  {project:<20} {parent:<10} {s.title[:40]}")
+        click.echo(f"{s.id[:8]:<10} {s.tool:<12} {modified:<12} {s.message_count:>5}  {project:<20} {parent:<10} {s.title[:40]}")
 
 
 @main.command(name="open")
