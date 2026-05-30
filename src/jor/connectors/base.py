@@ -105,25 +105,18 @@ class BaseConnector(ABC):
     # --- Launching: resume or write + launch ---
 
     def launch(self, messages: list[JorMessage], session_id: str | None = None, project: str | None = None) -> None:
-        """Launch the tool. Uses eval mode (print commands) if called via
-        the jor shell function, otherwise falls back to exec."""
+        """Print shell commands for eval: cd to project dir and run the tool."""
         if session_id:
             cmd = self.RESUME_CMD.format(session_id=session_id)
         else:
             _, cmd, _ = self.write_session(messages, project)
 
+        parts = []
         cwd = project if project and Path(project).is_dir() else None
-
-        if os.environ.get("JOR_SHELL"):
-            parts = []
-            if cwd:
-                parts.append(f"cd {shlex.quote(cwd)}")
-            parts.append(cmd)
-            print(" && ".join(parts))
-        else:
-            if cwd:
-                os.chdir(cwd)
-            os.execvp("sh", ["sh", "-c", cmd])
+        if cwd:
+            parts.append(f"cd {shlex.quote(cwd)}")
+        parts.append(cmd)
+        print(" && ".join(parts))
 
     # --- Internal ---
 

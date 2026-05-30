@@ -17,7 +17,11 @@ cd jor
 pip install -e .
 ```
 
-Shell integration is set up automatically on first run.
+Add to your shell rc file (`~/.zshrc`, `~/.bashrc`, etc.):
+
+```bash
+eval "$(jor init)"
+```
 
 ## Usage
 
