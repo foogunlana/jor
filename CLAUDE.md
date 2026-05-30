@@ -79,6 +79,38 @@ src/jor/
 - **No premature structure** — don't create files, directories, or `__init__.py` until they're needed by actual code
 - **TDD workflow** — see `.claude/workflows/tdd.md`. Every feature gets a test bead then an impl bead. Ralph processes them in order.
 
+## Git Workflow
+
+**Branching:** All work happens on feature branches. Never commit directly to `main`.
+
+```bash
+git checkout -b feat/short-description   # new feature
+git checkout -b fix/short-description    # bug fix
+```
+
+**Conventional commits:** All commit messages must follow [conventional commits](https://www.conventionalcommits.org/):
+
+```
+feat: add incremental discovery to jor list
+fix: remove duplicate sessions on re-convert
+refactor: extract spinner into standalone module
+test: add mtime filtering tests for BaseConnector
+docs: update README install instructions
+chore: add CI/CD workflows
+```
+
+- Use `feat:` for new functionality
+- Use `fix:` for bug fixes
+- Use `refactor:` for code changes that don't add features or fix bugs
+- Use `test:` for test-only changes
+- Use `docs:` for documentation-only changes
+- Use `chore:` for build/CI/tooling changes
+- Keep the subject line under 72 characters
+- Use imperative mood ("add" not "added")
+
+**Pull requests:** Open a PR to merge into `main`. PRs run CI (tests on Python 3.11-3.13) and require passing before merge.
+
+**Releases:** Create a GitHub release with a version tag (e.g. `v0.2.0`) to auto-publish to PyPI.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:ca08a54f -->
 ## Beads Issue Tracker
