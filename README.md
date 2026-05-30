@@ -28,9 +28,9 @@ jor list -q "auth refactor"          # search titles
 jor list --path /code/myapp          # filter by project
 
 # Open a session (resume in its original tool, or cross-tool)
-jor open <session-id>                # resume in original tool
-jor open <session-id> --codex        # open in Codex
-jor open <session-id> --claude       # open in Claude Code
+eval "$(jor open <session-id>)"              # resume in original tool
+eval "$(jor open <session-id> --codex)"      # open in Codex
+eval "$(jor open <session-id> --claude)"     # open in Claude Code
 ```
 
 ## How It Works
