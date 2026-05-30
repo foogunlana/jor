@@ -76,7 +76,7 @@ src/jor/
 - **`metadata` field** preserves raw source data that doesn't fit the schema
 - **`source_tool` and `source_id`** track provenance back to the original session
 - **`convert` and `open` are separate** — `convert` writes the file and prints the resume command, `open` also launches the tool. This lets users add their own flags.
-- **Default target is `--claude-code`**, `--codex` is an alternative flag
+- **Default target is `--claude`**, `--codex` is an alternative flag
 
 ## Rules
 
