@@ -43,8 +43,19 @@ def _connector_for(tool: str) -> ClaudeConnector | CodexConnector:
 
 def _jor_home() -> Path:
     home = JOR_HOME
+    first_run = not home.exists()
     home.mkdir(exist_ok=True)
     (home / "sessions").mkdir(exist_ok=True)
+    if first_run:
+        click.echo(
+            "Note: when you exit a session opened with `jor open`, your shell\n"
+            "stays in its original directory. You may need to cd to the project\n"
+            "directory before using the tool's resume command.\n"
+            "\n"
+            "Upvote https://github.com/foogunlana/jor/issues/10 if you'd like\n"
+            "automatic shell integration.\n",
+            err=True,
+        )
     return home
 
 
