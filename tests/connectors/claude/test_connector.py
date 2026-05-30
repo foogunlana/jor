@@ -1,5 +1,6 @@
 """Tests for the Claude session connector."""
 
+import os
 from pathlib import Path
 
 import pytest
@@ -159,3 +160,32 @@ def test_scan_handles_malformed_file(tmp_path: Path, jor_home: Path):
     c = ClaudeConnector(claude_home=tmp_path / ".claude")
     entries = c.scan(jor_home)
     assert entries == []
+
+
+# ---------------------------------------------------------------------------
+# Incremental scan (since parameter)
+# ---------------------------------------------------------------------------
+
+
+def test_scan_since_skips_old_files(claude_home: Path, jor_home: Path):
+    """Files older than `since` are skipped."""
+    c = ClaudeConnector(claude_home=claude_home)
+    # Set all session files to an old mtime
+    for f in claude_home.rglob("*.jsonl"):
+        os.utime(f, (0, 1000))
+    entries = c.scan(jor_home, since=2000.0)
+    assert entries == []
+
+
+def test_scan_since_includes_new_files(claude_home: Path, jor_home: Path):
+    """Files newer than `since` are processed."""
+    c = ClaudeConnector(claude_home=claude_home)
+    entries = c.scan(jor_home, since=0.0)
+    assert len(entries) == 1
+
+
+def test_scan_since_none_processes_all(claude_home: Path, jor_home: Path):
+    """since=None processes all files (backwards compatible)."""
+    c = ClaudeConnector(claude_home=claude_home)
+    entries = c.scan(jor_home, since=None)
+    assert len(entries) == 1

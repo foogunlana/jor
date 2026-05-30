@@ -52,9 +52,11 @@ class BaseConnector(ABC):
     def detect(self) -> bool:
         return (self._home / self.DETECT_PATH).exists()
 
-    def scan(self, jor_home: Path) -> list[IndexEntry]:
+    def scan(self, jor_home: Path, since: float | None = None) -> list[IndexEntry]:
         entries: list[IndexEntry] = []
         for session_path in self._home.glob(self.GLOB_PATTERN):
+            if since is not None and session_path.stat().st_mtime <= since:
+                continue
             entry = self._process(session_path, jor_home)
             if entry is not None:
                 entries.append(entry)
