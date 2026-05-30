@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import functools
 import logging
+import os
 import time
 from pathlib import Path
 
@@ -51,11 +52,35 @@ def _jor_home() -> Path:
 SHELL_INIT = """\
 jor() {
   if [ "$1" = "open" ]; then
-    eval "$(command jor "$@")"
+    eval "$(JOR_SHELL=1 command jor "$@")"
   else
     command jor "$@"
   fi
 }"""
+
+EVAL_LINE = 'eval "$(jor init)"'
+
+RC_FILES = {
+    "zsh": Path.home() / ".zshrc",
+    "bash": Path.home() / ".bashrc",
+}
+
+
+def _ensure_shell_setup() -> None:
+    """Add eval "$(jor init)" to the user's shell rc file if not present."""
+    shell = os.environ.get("SHELL", "")
+    shell_name = Path(shell).name if shell else ""
+    rc_path = RC_FILES.get(shell_name)
+    if not rc_path:
+        return
+
+    if rc_path.exists() and EVAL_LINE in rc_path.read_text():
+        return
+
+    with rc_path.open("a") as f:
+        f.write(f"\n{EVAL_LINE}\n")
+    click.echo(f"Added jor shell integration to {rc_path}", err=True)
+    click.echo("Restart your shell or run: source " + str(rc_path), err=True)
 
 
 @click.group()
@@ -65,10 +90,7 @@ def main() -> None:
 
 @main.command()
 def init() -> None:
-    """Print shell function for eval. Add to your shell rc file:
-
-    eval "$(jor init)"
-    """
+    """Print shell function for jor open integration."""
     click.echo(SHELL_INIT)
 
 
@@ -81,6 +103,7 @@ def init() -> None:
 @_verbose_option
 def list_sessions(codex: bool, claude: bool, query: str | None, limit: int, path: str | None) -> None:
     """List indexed sessions."""
+    _ensure_shell_setup()
     jor_home = _jor_home()
 
     # Incremental discovery
