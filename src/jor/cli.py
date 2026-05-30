@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import logging
+import time
 from pathlib import Path
 
 import click
@@ -12,6 +14,8 @@ from jor.core.index import load_index
 from jor.core.reader import read_session
 from jor.core.scanner import Scanner
 from jor.spinner import Spinner
+
+log = logging.getLogger("jor")
 
 JOR_HOME = Path.home() / ".jor"
 
@@ -33,8 +37,14 @@ def _jor_home() -> Path:
 
 
 @click.group()
-def main() -> None:
+@click.option("-v", "--verbose", is_flag=True, help="Enable verbose logging with timing")
+@click.pass_context
+def main(ctx: click.Context, verbose: bool) -> None:
     """Jor — list and continue AI sessions across tools."""
+    ctx.ensure_object(dict)
+    ctx.obj["verbose"] = verbose
+    level = logging.DEBUG if verbose else logging.WARNING
+    logging.basicConfig(format="%(message)s", level=level)
 
 
 
@@ -51,10 +61,14 @@ def list_sessions(codex: bool, claude: bool, query: str | None, limit: int, path
     # Incremental discovery
     connectors = [ClaudeConnector(), CodexConnector()]
     scanner = Scanner(connectors=connectors, jor_home=jor_home)
+    t0 = time.monotonic()
     with Spinner("Searching..."):
         scanner.run_incremental()
+    log.debug("discovery: %.2fs", time.monotonic() - t0)
 
+    t0 = time.monotonic()
     index = load_index(jor_home / "index.json")
+    log.debug("load index (%d sessions): %.2fs", len(index.sessions), time.monotonic() - t0)
     sessions = index.sessions
 
     if codex:
@@ -100,8 +114,10 @@ def open_session(session_id: str, codex: bool, claude: bool) -> None:
     Defaults to the session's original tool. Use --codex or --claude to
     open in a different tool.
     """
+    t0 = time.monotonic()
     jor_home = _jor_home()
     index = load_index(jor_home / "index.json")
+    log.debug("load index: %.2fs", time.monotonic() - t0)
 
     entry = next((s for s in index.sessions if s.id.startswith(session_id)), None)
     if entry is None:
@@ -119,12 +135,18 @@ def open_session(session_id: str, codex: bool, claude: bool) -> None:
     else:
         target = entry.tool
 
-    session_file = jor_home / "sessions" / f"{entry.id}.jsonl"
-    messages = read_session(session_file)
-
     same_tool = entry.tool == target
-    source_id = entry.source_id if same_tool else None
-
     connector = _connector_for(target)
-    # exec replaces this process — cd's to project dir first
-    connector.launch(messages, session_id=source_id, project=entry.project)
+    log.debug("target=%s same_tool=%s", target, same_tool)
+
+    if same_tool:
+        log.debug("resuming directly (no conversion)")
+        connector.launch([], session_id=entry.source_id, project=entry.project)
+    else:
+        session_file = jor_home / "sessions" / f"{entry.id}.jsonl"
+        t0 = time.monotonic()
+        messages = read_session(session_file)
+        log.debug("read session (%d messages): %.2fs", len(messages), time.monotonic() - t0)
+        t0 = time.monotonic()
+        connector.launch(messages, session_id=None, project=entry.project)
+        log.debug("write + launch: %.2fs", time.monotonic() - t0)
