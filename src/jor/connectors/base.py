@@ -104,12 +104,15 @@ class BaseConnector(ABC):
     # --- Launching: resume or write + launch ---
 
     def launch(self, messages: list[JorMessage], session_id: str | None = None, project: str | None = None) -> None:
-        """Write session and exec into the tool."""
+        """Write session, cd to project dir, and exec into the tool."""
         if session_id:
             cmd = self.RESUME_CMD.format(session_id=session_id)
         else:
             _, cmd, _ = self.write_session(messages, project)
 
+        cwd = project if project and Path(project).is_dir() else None
+        if cwd:
+            os.chdir(cwd)
         os.execvp("sh", ["sh", "-c", cmd])
 
     # --- Internal ---
