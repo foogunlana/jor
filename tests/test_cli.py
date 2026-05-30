@@ -185,8 +185,8 @@ def test_list_runs_incremental_discovery(tmp_path: Path) -> None:
     MockScanner.return_value.run_incremental.assert_called_once()
 
 
-def test_list_shows_new_session_count(tmp_path: Path) -> None:
-    """jor list should print count when new sessions are found."""
+def test_list_no_discovery_message_in_output(tmp_path: Path) -> None:
+    """Incremental discovery should not leave messages in stdout."""
     runner = CliRunner()
     index = SessionIndex(sessions=[_entry()])
     with patch("jor.cli.load_index", return_value=index), \
@@ -194,21 +194,6 @@ def test_list_shows_new_session_count(tmp_path: Path) -> None:
          patch("jor.cli.ClaudeConnector"), \
          patch("jor.cli.CodexConnector"):
         MockScanner.return_value.run_incremental.return_value = {"claude": 3}
-        result = runner.invoke(main, ["list"])
-
-    assert result.exit_code == 0
-    assert "Found 3 new sessions" in result.output
-
-
-def test_list_no_new_sessions_no_extra_output(tmp_path: Path) -> None:
-    """jor list should print nothing extra when no new sessions found."""
-    runner = CliRunner()
-    index = SessionIndex(sessions=[_entry()])
-    with patch("jor.cli.load_index", return_value=index), \
-         patch("jor.cli.Scanner") as MockScanner, \
-         patch("jor.cli.ClaudeConnector"), \
-         patch("jor.cli.CodexConnector"):
-        MockScanner.return_value.run_incremental.return_value = {"claude": 0, "codex": 0}
         result = runner.invoke(main, ["list"])
 
     assert result.exit_code == 0

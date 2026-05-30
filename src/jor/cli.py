@@ -68,11 +68,8 @@ def list_sessions(codex: bool, claude: bool, query: str | None, limit: int, path
     # Incremental discovery
     connectors = [ClaudeConnector(), CodexConnector()]
     scanner = Scanner(connectors=connectors, jor_home=jor_home)
-    with Spinner("Discovering new sessions..."):
-        counts = scanner.run_incremental()
-    total_new = sum(counts.values())
-    if total_new > 0:
-        click.echo(f"Found {total_new} new sessions")
+    with Spinner("Searching..."):
+        scanner.run_incremental()
 
     index = load_index(jor_home / "index.json")
     sessions = index.sessions
@@ -94,13 +91,19 @@ def list_sessions(codex: bool, claude: bool, query: str | None, limit: int, path
         click.echo("No sessions found.")
         return
 
-    click.echo(f"{'ID':<10} {'Tool':<12} {'Date':<12} {'Msgs':>5}  {'Project':<20} {'Parent':<10} Title")
-    click.echo("-" * 90)
+    click.echo(f"{'ID':<10} {'Tool':<12} {'Date':<12} {'Modified':<12} {'Msgs':>5}  {'Project':<20} {'Parent':<10} Title")
+    click.echo("-" * 102)
     for s in sessions:
         date = s.started_at[:10] if s.started_at else "unknown"
+        source = Path(s.source_path)
+        modified = ""
+        if source.exists():
+            from datetime import datetime, timezone
+            mtime = source.stat().st_mtime
+            modified = datetime.fromtimestamp(mtime, tz=timezone.utc).strftime("%Y-%m-%d")
         project = Path(s.project).name if s.project else ""
         parent = s.parent_id[:8] if s.parent_id else ""
-        click.echo(f"{s.id[:8]:<10} {s.tool:<12} {date:<12} {s.message_count:>5}  {project:<20} {parent:<10} {s.title[:40]}")
+        click.echo(f"{s.id[:8]:<10} {s.tool:<12} {date:<12} {modified:<12} {s.message_count:>5}  {project:<20} {parent:<10} {s.title[:40]}")
 
 
 @main.command()
