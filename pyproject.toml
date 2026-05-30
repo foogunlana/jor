@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "jor"
+name = "pyjor"
 version = "0.1.0"
 description = "AI session discovery, conversion, and cross-tool continuation"
 readme = "README.md"

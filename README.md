@@ -12,9 +12,7 @@ Jor finds AI sessions across tools on your machine and lets you resume any sessi
 ## Install
 
 ```bash
-git clone https://github.com/foogunlana/jor.git
-cd jor
-pip install -e .
+pip install pyjor
 ```
 
 ## Usage
