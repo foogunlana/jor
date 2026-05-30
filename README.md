@@ -17,6 +17,12 @@ cd jor
 pip install -e .
 ```
 
+Add to your shell rc file (`~/.zshrc`, `~/.bashrc`, etc.):
+
+```bash
+eval "$(jor init)"
+```
+
 ## Usage
 
 ```bash
