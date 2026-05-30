@@ -1,16 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
 
-# Beads / Dolt files (added by bd init)
+# Build
+dist/
+
+# Testing
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Beads (issue tracker — local state)
+.beads/
+
+# Claude Code (agent config — local)
+.claude/
+
+# Ralph (automation — local)
+.ralph/
+
+# Dolt
 .dolt/
 *.db
 .beads-credential-key
 
-# Ralph worktrees and logs
-.ralph/worktrees/
-.ralph/logs/
-
-# bv (beads viewer) local config and caches
+# Other tools
 .bv/
-.claude/worktrees/
 .omx/
-dist/
+
+# Internal docs (kept locally, not shipped)
 docs/
+
+# Skill definitions (kept locally)
+skill/
