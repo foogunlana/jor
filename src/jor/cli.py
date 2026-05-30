@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import functools
 import logging
 import time
 from pathlib import Path
@@ -25,6 +26,17 @@ CONNECTORS = {
 }
 
 
+def _verbose_option(fn):
+    """Add -v/--verbose to a command and configure logging."""
+    @click.option("-v", "--verbose", is_flag=True, help="Enable verbose logging with timing")
+    @functools.wraps(fn)
+    def wrapper(*args, verbose: bool, **kwargs):
+        if verbose:
+            logging.basicConfig(format="%(message)s", level=logging.DEBUG)
+        return fn(*args, **kwargs)
+    return wrapper
+
+
 def _connector_for(tool: str) -> ClaudeConnector | CodexConnector:
     return CONNECTORS[tool]()
 
@@ -37,15 +49,8 @@ def _jor_home() -> Path:
 
 
 @click.group()
-@click.option("-v", "--verbose", is_flag=True, help="Enable verbose logging with timing")
-@click.pass_context
-def main(ctx: click.Context, verbose: bool) -> None:
+def main() -> None:
     """Jor — list and continue AI sessions across tools."""
-    ctx.ensure_object(dict)
-    ctx.obj["verbose"] = verbose
-    level = logging.DEBUG if verbose else logging.WARNING
-    logging.basicConfig(format="%(message)s", level=level)
-
 
 
 @main.command(name="list")
@@ -54,6 +59,7 @@ def main(ctx: click.Context, verbose: bool) -> None:
 @click.option("--query", "-q", default=None, help="Search titles")
 @click.option("--limit", "-n", default=20, show_default=True, help="Max results")
 @click.option("--path", default=None, help="Filter by workspace path")
+@_verbose_option
 def list_sessions(codex: bool, claude: bool, query: str | None, limit: int, path: str | None) -> None:
     """List indexed sessions."""
     jor_home = _jor_home()
@@ -103,11 +109,11 @@ def list_sessions(codex: bool, claude: bool, query: str | None, limit: int, path
         click.echo(f"{s.id[:8]:<10} {s.tool:<12} {date:<12} {modified:<12} {s.message_count:>5}  {project:<20} {parent:<10} {s.title[:40]}")
 
 
-
 @main.command(name="open")
 @click.argument("session_id")
 @click.option("--codex", is_flag=True, help="Open in Codex")
 @click.option("--claude", "claude", is_flag=True, help="Open in Claude")
+@_verbose_option
 def open_session(session_id: str, codex: bool, claude: bool) -> None:
     """Convert a session and launch the target tool.
 
