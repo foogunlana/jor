@@ -144,7 +144,12 @@ def test_list_limit_restricts_results(tmp_path: Path) -> None:
         for i in range(10)
     ]
     index = SessionIndex(sessions=sessions)
-    with patch("jor.cli.load_index", return_value=index):
+    with patch("jor.cli.load_index", return_value=index), \
+         patch("jor.cli.Scanner") as MockScanner, \
+         patch("jor.cli.ClaudeConnector"), \
+         patch("jor.cli.CodexConnector"), \
+         patch("jor.cli.Spinner"):
+        MockScanner.return_value.run_incremental.return_value = {}
         result = runner.invoke(main, ["list", "--limit", "3"])
 
     assert result.exit_code == 0
