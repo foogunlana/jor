@@ -12,6 +12,7 @@ from jor.connectors.codex.connector import CodexConnector
 from jor.core.index import IndexEntry, load_index, save_index, upsert_session
 from jor.core.reader import read_session
 from jor.core.scanner import Scanner
+from jor.spinner import Spinner
 
 JOR_HOME = Path.home() / ".jor"
 
@@ -63,6 +64,16 @@ def discover() -> None:
 def list_sessions(codex: bool, claude: bool, query: str | None, limit: int, path: str | None) -> None:
     """List indexed sessions."""
     jor_home = _jor_home()
+
+    # Incremental discovery
+    connectors = [ClaudeConnector(), CodexConnector()]
+    scanner = Scanner(connectors=connectors, jor_home=jor_home)
+    with Spinner("Discovering new sessions..."):
+        counts = scanner.run_incremental()
+    total_new = sum(counts.values())
+    if total_new > 0:
+        click.echo(f"Found {total_new} new sessions")
+
     index = load_index(jor_home / "index.json")
     sessions = index.sessions
 

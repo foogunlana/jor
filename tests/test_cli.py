@@ -165,6 +165,51 @@ def test_list_shows_parent_id_for_copies(tmp_path: Path) -> None:
     assert "parent00" in result.output  # parent_id shown truncated
 
 
+def test_list_runs_incremental_discovery(tmp_path: Path) -> None:
+    """jor list should run incremental discovery before listing."""
+    runner = CliRunner()
+    index = SessionIndex(sessions=[_entry()])
+    with patch("jor.cli.load_index", return_value=index), \
+         patch("jor.cli.Scanner") as MockScanner, \
+         patch("jor.cli.ClaudeConnector"), \
+         patch("jor.cli.CodexConnector"):
+        MockScanner.return_value.run_incremental.return_value = {}
+        result = runner.invoke(main, ["list"])
+
+    assert result.exit_code == 0
+    MockScanner.return_value.run_incremental.assert_called_once()
+
+
+def test_list_shows_new_session_count(tmp_path: Path) -> None:
+    """jor list should print count when new sessions are found."""
+    runner = CliRunner()
+    index = SessionIndex(sessions=[_entry()])
+    with patch("jor.cli.load_index", return_value=index), \
+         patch("jor.cli.Scanner") as MockScanner, \
+         patch("jor.cli.ClaudeConnector"), \
+         patch("jor.cli.CodexConnector"):
+        MockScanner.return_value.run_incremental.return_value = {"claude": 3}
+        result = runner.invoke(main, ["list"])
+
+    assert result.exit_code == 0
+    assert "Found 3 new sessions" in result.output
+
+
+def test_list_no_new_sessions_no_extra_output(tmp_path: Path) -> None:
+    """jor list should print nothing extra when no new sessions found."""
+    runner = CliRunner()
+    index = SessionIndex(sessions=[_entry()])
+    with patch("jor.cli.load_index", return_value=index), \
+         patch("jor.cli.Scanner") as MockScanner, \
+         patch("jor.cli.ClaudeConnector"), \
+         patch("jor.cli.CodexConnector"):
+        MockScanner.return_value.run_incremental.return_value = {"claude": 0, "codex": 0}
+        result = runner.invoke(main, ["list"])
+
+    assert result.exit_code == 0
+    assert "Found" not in result.output
+
+
 def test_list_filter_by_path(tmp_path: Path) -> None:
     runner = CliRunner()
     index = SessionIndex(sessions=[

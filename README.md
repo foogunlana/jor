@@ -12,7 +12,9 @@ Jor discovers sessions across AI tools on your machine, converts them to a commo
 ## Install
 
 ```bash
-pip install jor
+git clone https://github.com/foogunlana/jor.git
+cd jor
+pip install -e .
 ```
 
 ## Usage
