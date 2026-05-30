@@ -45,3 +45,25 @@ class Scanner:
         index.last_scan = datetime.now(timezone.utc).isoformat()
         save_index(index, index_path)
         return counts
+
+    def run_incremental(self) -> dict[str, int]:
+        """Run discovery only on files changed since last scan."""
+        index_path = self._jor_home / "index.json"
+        index = load_index(index_path)
+
+        since: float | None = None
+        if index.last_scan:
+            since = datetime.fromisoformat(index.last_scan).timestamp()
+
+        counts: dict[str, int] = {}
+        for connector in self._connectors:
+            if not connector.detect():
+                continue
+            entries = connector.scan(jor_home=self._jor_home, since=since)
+            for entry in entries:
+                upsert_session(index, entry)
+            counts[connector.name()] = len(entries)
+
+        index.last_scan = datetime.now(timezone.utc).isoformat()
+        save_index(index, index_path)
+        return counts
