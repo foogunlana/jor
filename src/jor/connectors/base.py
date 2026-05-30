@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import json
 import os
-import shlex
 import subprocess
 import uuid
 from abc import ABC, abstractmethod
@@ -105,18 +104,16 @@ class BaseConnector(ABC):
     # --- Launching: resume or write + launch ---
 
     def launch(self, messages: list[JorMessage], session_id: str | None = None, project: str | None = None) -> None:
-        """Print shell commands for eval: cd to project dir and run the tool."""
+        """Write session, cd to project dir, and exec into the tool."""
         if session_id:
             cmd = self.RESUME_CMD.format(session_id=session_id)
         else:
             _, cmd, _ = self.write_session(messages, project)
 
-        parts = []
         cwd = project if project and Path(project).is_dir() else None
         if cwd:
-            parts.append(f"cd {shlex.quote(cwd)}")
-        parts.append(cmd)
-        print(" && ".join(parts))
+            os.chdir(cwd)
+        os.execvp("sh", ["sh", "-c", cmd])
 
     # --- Internal ---
 

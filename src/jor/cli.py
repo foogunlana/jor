@@ -48,28 +48,9 @@ def _jor_home() -> Path:
     return home
 
 
-SHELL_INIT = """\
-jor() {
-  if [ "$1" = "open" ]; then
-    eval "$(command jor "$@")"
-  else
-    command jor "$@"
-  fi
-}"""
-
-
 @click.group()
 def main() -> None:
     """Jor — list and continue AI sessions across tools."""
-
-
-@main.command()
-def init() -> None:
-    """Print shell function for eval. Add to your shell rc file:
-
-    eval "$(jor init)"
-    """
-    click.echo(SHELL_INIT)
 
 
 @main.command(name="list")
