@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-import uuid
 from pathlib import Path
 
 import click
 
 from jor.connectors.claude.connector import ClaudeConnector
 from jor.connectors.codex.connector import CodexConnector
-from jor.core.index import IndexEntry, load_index, save_index, upsert_session
+from jor.core.index import load_index
 from jor.core.reader import read_session
 from jor.core.scanner import Scanner
 from jor.spinner import Spinner
@@ -35,24 +34,8 @@ def _jor_home() -> Path:
 
 @click.group()
 def main() -> None:
-    """Jor — discover, convert, and continue AI sessions across tools."""
+    """Jor — list and continue AI sessions across tools."""
 
-
-@main.command()
-def discover() -> None:
-    """Scan the local machine for AI sessions and build the index."""
-    jor_home = _jor_home()
-    connectors = [ClaudeConnector(), CodexConnector()]
-    counts = Scanner(connectors=connectors, jor_home=jor_home).run()
-
-    if not counts:
-        click.echo("No sessions found.")
-        return
-
-    total = sum(counts.values())
-    breakdown = ", ".join(f"{n} {tool}" for tool, n in counts.items())
-    click.echo(f"Found {total} sessions: {breakdown}")
-    click.echo(f"Index updated at {jor_home / 'index.json'}")
 
 
 @main.command(name="list")
@@ -106,58 +89,6 @@ def list_sessions(codex: bool, claude: bool, query: str | None, limit: int, path
         click.echo(f"{s.id[:8]:<10} {s.tool:<12} {date:<12} {modified:<12} {s.message_count:>5}  {project:<20} {parent:<10} {s.title[:40]}")
 
 
-@main.command()
-@click.argument("session_id")
-@click.option("--codex", is_flag=True, help="Convert to Codex format")
-@click.option("--claude", "claude", is_flag=True, help="Convert to Claude format")
-def convert(session_id: str, codex: bool, claude: bool) -> None:
-    """Translate a session to the target tool's native format.
-
-    Defaults to the opposite tool (codex→claude, claude→codex).
-    Use --codex or --claude to specify explicitly.
-    """
-    jor_home = _jor_home()
-    index = load_index(jor_home / "index.json")
-
-    entry = next((s for s in index.sessions if s.id.startswith(session_id)), None)
-    if entry is None:
-        click.echo(f"Session '{session_id}' not found. Run `jor discover` first.", err=True)
-        raise SystemExit(1)
-
-    if codex and claude:
-        click.echo("Cannot specify both --codex and --claude.", err=True)
-        raise SystemExit(1)
-
-    if codex:
-        target = "codex"
-    elif claude:
-        target = "claude"
-    else:
-        target = "codex" if entry.tool == "claude" else "claude"
-
-    session_file = jor_home / "sessions" / f"{entry.id}.jsonl"
-    messages = read_session(session_file)
-
-    connector = _connector_for(target)
-    new_id, cmd, out = connector.write_session(messages, entry.project)
-
-    new_entry = IndexEntry(
-        id=str(uuid.uuid5(uuid.NAMESPACE_URL, str(out))),
-        tool=target,
-        source_id=new_id,
-        source_path=str(out),
-        title=entry.title,
-        project=entry.project,
-        started_at=entry.started_at,
-        message_count=entry.message_count,
-        parent_id=entry.id,
-    )
-    upsert_session(index, new_entry)
-    save_index(index, jor_home / "index.json")
-
-    click.echo(f"Session written to {out}")
-    click.echo(f"\nTo resume, run:\n  {cmd}")
-
 
 @main.command(name="open")
 @click.argument("session_id")
@@ -174,7 +105,7 @@ def open_session(session_id: str, codex: bool, claude: bool) -> None:
 
     entry = next((s for s in index.sessions if s.id.startswith(session_id)), None)
     if entry is None:
-        click.echo(f"Session '{session_id}' not found. Run `jor discover` first.", err=True)
+        click.echo(f"Session '{session_id}' not found. Run `jor list` first.", err=True)
         raise SystemExit(1)
 
     if codex and claude:

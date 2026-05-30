@@ -20,25 +20,17 @@ pip install -e .
 ## Usage
 
 ```bash
-# Discover all AI sessions on your machine
-jor discover
-
-# List indexed sessions (newest first)
+# List sessions (auto-discovers new ones)
 jor list
 jor list --codex                     # only Codex sessions
-jor list --claude               # only Claude Code sessions
+jor list --claude                    # only Claude Code sessions
 jor list -q "auth refactor"          # search titles
 jor list --path /code/myapp          # filter by project
-
-# Convert a session to another tool's format
-jor convert <session-id>             # auto: converts to the other tool
-jor convert <session-id> --codex     # explicit: convert to Codex
-jor convert <session-id> --claude
 
 # Open a session (resume in its original tool, or cross-tool)
 jor open <session-id>                # resume in original tool
 jor open <session-id> --codex        # open in Codex
-jor open <session-id> --claude  # open in Claude Code
+jor open <session-id> --claude       # open in Claude Code
 ```
 
 ## How It Works

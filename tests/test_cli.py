@@ -1,4 +1,4 @@
-"""Tests for the 4 CLI commands: discover, list, convert, open."""
+"""Tests for the CLI commands: list, open."""
 
 from __future__ import annotations
 
@@ -40,37 +40,6 @@ def _entry(
 
 
 # ---------------------------------------------------------------------------
-# jor discover
-# ---------------------------------------------------------------------------
-
-
-def test_discover_prints_found_sessions(tmp_path: Path) -> None:
-    runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path):
-        with patch("jor.cli.Scanner") as MockScanner, \
-             patch("jor.cli.ClaudeConnector"), \
-             patch("jor.cli.CodexConnector"):
-            MockScanner.return_value.run.return_value = {"claude": 3, "codex": 1}
-            result = runner.invoke(main, ["discover"])
-
-    assert result.exit_code == 0
-    assert "Found 4 sessions" in result.output
-    assert "3 claude" in result.output
-    assert "1 codex" in result.output
-
-
-def test_discover_no_sessions_found(tmp_path: Path) -> None:
-    runner = CliRunner()
-    with runner.isolated_filesystem(temp_dir=tmp_path):
-        with patch("jor.cli.Scanner") as MockScanner, \
-             patch("jor.cli.ClaudeConnector"), \
-             patch("jor.cli.CodexConnector"):
-            MockScanner.return_value.run.return_value = {}
-            result = runner.invoke(main, ["discover"])
-
-    assert result.exit_code == 0
-    assert "No sessions found" in result.output
-
 
 # ---------------------------------------------------------------------------
 # jor list
@@ -213,98 +182,6 @@ def test_list_filter_by_path(tmp_path: Path) -> None:
     assert "aaa00000" in result.output
     assert "bbb00000" not in result.output
 
-
-# ---------------------------------------------------------------------------
-# jor convert
-# ---------------------------------------------------------------------------
-
-
-def test_convert_default_converts_to_opposite_tool(tmp_path: Path) -> None:
-    """A claude session with no flags should convert to codex."""
-    runner = CliRunner()
-    entry = _entry(tool="claude")
-    index = SessionIndex(sessions=[entry])
-    messages = [MagicMock()]
-    mock_connector = MagicMock()
-    mock_connector.write_session.return_value = ("xyz", "codex resume xyz", tmp_path / "out.jsonl")
-
-    with patch("jor.cli.load_index", return_value=index), \
-         patch("jor.cli.read_session", return_value=messages), \
-         patch("jor.cli._connector_for", return_value=mock_connector), \
-         patch("jor.cli.save_index"):
-        result = runner.invoke(main, ["convert", "abc12345"])
-
-    assert result.exit_code == 0
-    mock_connector.write_session.assert_called_once()
-
-
-def test_convert_registers_copy_with_parent_id(tmp_path: Path) -> None:
-    """Convert should register the new session in the index with parent_id."""
-    runner = CliRunner()
-    entry = _entry(tool="claude")
-    index = SessionIndex(sessions=[entry])
-    messages = [MagicMock()]
-    mock_connector = MagicMock()
-    mock_connector.write_session.return_value = ("xyz", "codex resume xyz", tmp_path / "out.jsonl")
-
-    with patch("jor.cli.load_index", return_value=index), \
-         patch("jor.cli.read_session", return_value=messages), \
-         patch("jor.cli._connector_for", return_value=mock_connector), \
-         patch("jor.cli.save_index") as mock_save:
-        result = runner.invoke(main, ["convert", "abc12345"])
-
-    assert result.exit_code == 0
-    mock_save.assert_called_once()
-    # The new entry should be in the index with parent_id set
-    new_entries = [s for s in index.sessions if s.parent_id == entry.id]
-    assert len(new_entries) == 1
-    assert new_entries[0].tool == "codex"
-
-
-def test_convert_codex_flag_writes_codex_format(tmp_path: Path) -> None:
-    runner = CliRunner()
-    entry = _entry()
-    index = SessionIndex(sessions=[entry])
-    messages = [MagicMock()]
-    mock_connector = MagicMock()
-    mock_connector.write_session.return_value = ("xyz", "codex resume xyz", tmp_path / "out.jsonl")
-
-    with patch("jor.cli.load_index", return_value=index), \
-         patch("jor.cli.read_session", return_value=messages), \
-         patch("jor.cli._connector_for", return_value=mock_connector), \
-         patch("jor.cli.save_index"):
-        result = runner.invoke(main, ["convert", "abc12345", "--codex"])
-
-    assert result.exit_code == 0
-    assert "codex resume xyz" in result.output
-    mock_connector.write_session.assert_called_once()
-
-
-def test_convert_unknown_id_prints_error_and_exits(tmp_path: Path) -> None:
-    runner = CliRunner()
-    index = SessionIndex(sessions=[])
-    with patch("jor.cli.load_index", return_value=index):
-        result = runner.invoke(main, ["convert", "nonexistent"])
-
-    assert result.exit_code != 0
-    assert "not found" in result.output.lower() or "not found" in (result.output + (result.exception or "")).lower()
-
-
-def test_convert_prints_resume_command(tmp_path: Path) -> None:
-    runner = CliRunner()
-    entry = _entry(tool="codex")
-    index = SessionIndex(sessions=[entry])
-    messages = [MagicMock()]
-    mock_connector = MagicMock()
-    mock_connector.write_session.return_value = ("sid", "claude --resume sid", tmp_path / "out.jsonl")
-
-    with patch("jor.cli.load_index", return_value=index), \
-         patch("jor.cli.read_session", return_value=messages), \
-         patch("jor.cli._connector_for", return_value=mock_connector), \
-         patch("jor.cli.save_index"):
-        result = runner.invoke(main, ["convert", "abc12345"])
-
-    assert "claude --resume sid" in result.output
 
 
 # ---------------------------------------------------------------------------
