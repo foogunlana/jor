@@ -2,7 +2,7 @@
 
 Transfer AI sessions between tools. Start a conversation in Claude Code, continue it in Codex — or vice versa.
 
-Jor discovers sessions across AI tools on your machine, converts them to a common format, and writes them back in the target tool's native format so you can resume seamlessly.
+Jor finds AI sessions across tools on your machine and lets you resume any session in any supported tool.
 
 ## Supported Tools
 
@@ -35,10 +35,8 @@ jor open <session-id> --claude       # open in Claude Code
 
 ## How It Works
 
-1. **Discover** scans known session directories for each supported tool
-2. **Convert** translates messages, tool calls, and tool results into a common schema (JSONL)
-3. **Write** outputs the session in the target tool's native format
-4. **Open** writes + launches the tool with a resume command
+1. **`jor list`** scans known session directories, indexes what it finds, and shows a table
+2. **`jor open`** translates the session to the target tool's native format and launches it
 
 Sessions are portable — file paths are stored relative, and source provenance is preserved.
 
@@ -179,12 +177,8 @@ Add your connector to `cli.py`:
 ```python
 from jor.connectors.my_tool.connector import MyToolConnector
 
-# In discover:
-connectors = [ClaudeCodeConnector(), CodexConnector(), MyToolConnector()]
-
-# In CONNECTORS dict:
 CONNECTORS = {
-    "claude_code": ClaudeCodeConnector,
+    "claude": ClaudeConnector,
     "codex": CodexConnector,
     "my_tool": MyToolConnector,
 }

@@ -2,11 +2,11 @@
 
 ## What is Jor
 
-Jor is a CLI tool that discovers, indexes, and converts AI sessions across tools (Claude Code, Codex, Aider, Cursor, etc.) so you can continue any session in any tool. It's the missing session layer for AI — like Jupyter Notebooks unified data science, Jor unifies AI conversations.
+Jor is a CLI tool that finds AI sessions across tools (Claude Code, Codex, Aider, Cursor, etc.) and lets you continue any session in any tool. It's the missing session layer for AI — like Jupyter Notebooks unified data science, Jor unifies AI conversations.
 
 ## Current State
 
-Phase 1 — not yet implemented. Design spec complete.
+Phase 1 — implemented, not yet published to PyPI.
 
 ## Key Docs
 
@@ -19,11 +19,9 @@ Phase 1 — not yet implemented. Design spec complete.
 
 ## Architecture
 
-**CLI tool (`jor`)** with 4 commands:
-- `jor discover` — scan machine for AI sessions across tools, build index
-- `jor list` — list/filter indexed sessions
-- `jor convert <id>` — translate session to target tool's native format, print resume command
-- `jor open <id>` — convert + launch target tool
+**CLI tool (`jor`)** with 2 commands:
+- `jor list` — auto-discover and list sessions across tools
+- `jor open <id>` — convert session to target tool's format + launch
 
 **Claude Code skill** — wraps the CLI for in-session use.
 
@@ -42,26 +40,19 @@ Phase 1 — not yet implemented. Design spec complete.
 
 ```
 src/jor/
-├── cli.py                    # CLI entry point
-├── discovery/
-│   ├── scanner.py            # Orchestrates connectors, builds index
-│   ├── index.py              # Read/write ~/.jor/index.json
-│   └── connectors/
-│       ├── base.py           # Connector protocol
-│       ├── claude_code.py    # Claude Code JSONL → Jor
-│       └── codex.py          # Codex JSONL → Jor
-├── session/
-│   ├── schema.py             # JorMessage, ToolCall, ToolResult (Pydantic)
-│   ├── reader.py             # Read Jor sessions, format for output
-│   └── writers/
-│       ├── base.py           # Writer protocol
-│       ├── claude_code.py    # Jor → Claude Code native
-│       └── codex.py          # Jor → Codex native
-├── launchers/
-│   ├── base.py               # Launcher protocol
-│   ├── claude_code.py        # Write session + run `claude --resume`
-│   └── codex.py              # Write session + run `codex --resume`
-└── utils.py
+├── cli.py                    # CLI entry point (list, open)
+├── spinner.py                # Terminal spinner for async feedback
+├── connectors/
+│   ├── base.py               # BaseConnector protocol (read, write, launch)
+│   ├── claude/
+│   │   └── connector.py      # Claude Code JSONL ↔ Jor
+│   └── codex/
+│       └── connector.py      # Codex JSONL ↔ Jor
+└── core/
+    ├── schema.py             # JorMessage, ToolCall, ToolResult (Pydantic)
+    ├── reader.py             # Read Jor sessions
+    ├── scanner.py            # Orchestrates connectors, builds index
+    └── index.py              # Read/write ~/.jor/index.json
 ```
 
 ## Phase 1 Connectors
@@ -75,8 +66,7 @@ src/jor/
 - **Relative file paths only** — sessions are portable across machines
 - **`metadata` field** preserves raw source data that doesn't fit the schema
 - **`source_tool` and `source_id`** track provenance back to the original session
-- **`convert` and `open` are separate** — `convert` writes the file and prints the resume command, `open` also launches the tool. This lets users add their own flags.
-- **Default target is `--claude`**, `--codex` is an alternative flag
+- **`open` handles conversion implicitly** — converts to the target format and launches in one step
 
 ## Rules
 
