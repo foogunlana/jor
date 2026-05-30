@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "pyjor"
-version = "0.1.0"
+version = "0.1.1"
 description = "AI session discovery, conversion, and cross-tool continuation"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -35,6 +35,21 @@ Issues = "https://github.com/folusoogunlana/jor/issues"
 
 [project.scripts]
 jor = "jor.cli:main"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    ".beads/",
+    ".claude/",
+    ".ralph/",
+    ".github/",
+    "docs/",
+    "tests/",
+    "skill/",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "RALPH.md",
+    "uv.lock",
+]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/jor"]
